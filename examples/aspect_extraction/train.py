@@ -89,6 +89,7 @@ def run_aspect_sequence_tagging(
         train_file,
         test_file,
         embedding_model,
+        models_output,
         batch_size=10,
         epoch=50,
         tag_num=2,
@@ -148,7 +149,7 @@ def run_aspect_sequence_tagging(
     pp.pprint(eval)
 
     # saving model
-    with open('model-info' + '-' + basename(train_file), 'wb') as fp:
+    with open('models-nouns/model-info' + '-' + basename(train_file), 'wb') as fp:
         info = {
             'sentence_len': sentence_length,
             'word_len': word_length,

@@ -11,7 +11,8 @@ from train import run_aspect_sequence_tagging
     type=click.Path(exists=True)
 )
 @click.argument('embedding_model', default='/home/lukasz/data/glove.6B.50d.txt', type=click.Path(exists=True))
-def run_evaluation_multi_datasets(conll_files, embedding_model):
+@click.argument('models_output', default='models-temp', type=click.Path(exists=True))
+def run_evaluation_multi_datasets(conll_files, embedding_model, models_output):
     datasets_path = Path(conll_files)
     conll_train_files = list(datasets_path.glob('*train.conll'))
     conll_test_files = list(datasets_path.glob('*test.conll'))
@@ -24,6 +25,7 @@ def run_evaluation_multi_datasets(conll_files, embedding_model):
             embedding_model=embedding_model,
             tag_num=2,
             epoch=50,
+            models_output=models_output
         )
 
 
