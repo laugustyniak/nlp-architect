@@ -5,8 +5,12 @@ from train import run_aspect_sequence_tagging
 
 
 @click.command()
-@click.argument('conll_files', type=click.Path(exists=True))
-@click.argument('embedding_model', type=click.Path(exists=True))
+@click.argument(
+    'conll_files',
+    default='/home/lukasz/github/phd/sentiment-backend/aspects/data/aspects/bing_liu/bio_tags',
+    type=click.Path(exists=True)
+)
+@click.argument('embedding_model', default='/home/lukasz/data/glove.6B.50d.txt', type=click.Path(exists=True))
 def run_evaluation_multi_datasets(conll_files, embedding_model):
     datasets_path = Path(conll_files)
     conll_train_files = list(datasets_path.glob('*train.conll'))
