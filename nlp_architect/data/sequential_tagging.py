@@ -14,14 +14,15 @@
 # limitations under the License.
 # ******************************************************************************
 
+from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-from __future__ import absolute_import
 
 import numpy as np
 from keras.preprocessing.sequence import pad_sequences
 
+from nlp_architect.utils.embedding_augmentation import most_similar, filter_words_to_augment
 from nlp_architect.utils.text import Vocabulary
 
 
@@ -37,12 +38,15 @@ class SequentialTaggingDataset(object):
         max_word_length (int, optional): max word length
         tag_field_no (int, optional): index of column to use a y-samples
     """
+
     def __init__(self,
                  train_file,
                  test_file,
+                 embedding_model,
                  max_sentence_length=30,
                  max_word_length=20,
-                 tag_field_no=4):
+                 tag_field_no=4
+                 ):
         self.files = {'train': train_file,
                       'test': test_file}
         self.max_sent_len = max_sentence_length
@@ -50,8 +54,8 @@ class SequentialTaggingDataset(object):
         self.tf = tag_field_no
 
         self.vocabs = {'token': Vocabulary(2),  # 0=pad, 1=unk
-                       'char': Vocabulary(2),   # 0=pad, 1=unk
-                       'tag': Vocabulary(1)}    # 0=pad
+                       'char': Vocabulary(2),  # 0=pad, 1=unk
+                       'tag': Vocabulary(1)}  # 0=pad
 
         self.data = {}
         for f in self.files:
@@ -59,20 +63,45 @@ class SequentialTaggingDataset(object):
             word_vecs = []
             char_vecs = []
             tag_vecs = []
-            for tokens, tags in raw_sentences:
-                word_vecs.append(np.array([self.vocabs['token'].add(t) for t in tokens]))
-                word_chars = []
-                for t in tokens:
-                    word_chars.append(np.array([self.vocabs['char'].add(c) for c in t]))
-                word_chars = pad_sequences(word_chars, maxlen=self.max_word_len)
-                if self.max_sent_len - len(tokens) > 0:
-                    char_padding = self.max_sent_len - len(word_chars)
-                    char_vecs.append(
-                        np.concatenate((np.zeros((char_padding, self.max_word_len)), word_chars),
-                                       axis=0))
-                else:
-                    char_vecs.append(word_chars[-self.max_sent_len:])
-                tag_vecs.append(np.array([self.vocabs['tag'].add(t) for t in tags]))
+            for tokens_original, tags in raw_sentences:
+                n_augmentations = 0
+                tokens = tokens_original.copy()
+                n_tokens = len(tokens)
+                for token, augmentation, token_idx in filter_words_to_augment(tokens):
+                    if augmentation and token_idx < n_tokens:
+                        for token_augmentation in most_similar(word=token, threshold=0.7):
+                            n_augmentations += 1
+                            print('Replacement: ', tokens[token_idx], ' with ', token_augmentation.text)
+                            tokens[token_idx] = token_augmentation.text
+                            # print('Augmented sentence: ', tokens)
+                            word_vecs.append(np.array([self.vocabs['token'].add(t) for t in tokens]))
+                            word_chars = []
+                            for t in tokens:
+                                word_chars.append(np.array([self.vocabs['char'].add(c) for c in t]))
+                            word_chars = pad_sequences(word_chars, maxlen=self.max_word_len)
+                            if self.max_sent_len - len(tokens) > 0:
+                                char_padding = self.max_sent_len - len(word_chars)
+                                char_vecs.append(
+                                    np.concatenate((np.zeros((char_padding, self.max_word_len)), word_chars),
+                                                   axis=0))
+                            else:
+                                char_vecs.append(word_chars[-self.max_sent_len:])
+                            tag_vecs.append(np.array([self.vocabs['tag'].add(t) for t in tags]))
+                    else:
+                        word_vecs.append(np.array([self.vocabs['token'].add(t) for t in tokens]))
+                        word_chars = []
+                        for t in tokens:
+                            word_chars.append(np.array([self.vocabs['char'].add(c) for c in t]))
+                        word_chars = pad_sequences(word_chars, maxlen=self.max_word_len)
+                        if self.max_sent_len - len(tokens) > 0:
+                            char_padding = self.max_sent_len - len(word_chars)
+                            char_vecs.append(
+                                np.concatenate((np.zeros((char_padding, self.max_word_len)), word_chars),
+                                               axis=0))
+                        else:
+                            char_vecs.append(word_chars[-self.max_sent_len:])
+                        tag_vecs.append(np.array([self.vocabs['tag'].add(t) for t in tags]))
+                print('# of augmentations', n_augmentations)
             word_vecs = pad_sequences(word_vecs, maxlen=self.max_sent_len)
             char_vecs = np.asarray(char_vecs)
             tag_vecs = pad_sequences(tag_vecs, maxlen=self.max_sent_len)
