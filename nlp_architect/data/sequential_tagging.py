@@ -63,7 +63,7 @@ class SequentialTaggingDataset(object):
             word_vecs = []
             char_vecs = []
             tag_vecs = []
-            for tokens_original, tags in tqdm(raw_sentences[:3]):
+            for tokens_original, tags in tqdm(raw_sentences):
                 n_augmentations = 0
                 tokens = tokens_original.copy()
                 n_tokens = len(tokens)
