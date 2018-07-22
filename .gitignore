@@ -26,3 +26,49 @@ generated
 dist
 .nlp_architect_env/
 _generated_reqs.txt
+
+nlp_architect/data/2017-06-custom-intent-engines/
+
+venv/
+
+src/pip-delete-this-directory\.txt
+
+src/
+
+*.xml
+
+*.csv
+
+examples/aspect_extraction/model-info-Apex AD2600 Progressive-scan DVD player-train\.conll
+
+examples/aspect_extraction/model-info-Canon G3-train\.conll
+
+examples/aspect_extraction/model-info-Canon PowerShot SD500-train\.conll
+
+examples/aspect_extraction/model-info-Canon S100-train\.conll
+
+examples/aspect_extraction/model-info-Computer-train\.conll
+
+examples/aspect_extraction/model-info-Creative Labs Nomad Jukebox Zen Xtra 40GB-train\.conll
+
+examples/aspect_extraction/model-info-Diaper Champ-train\.conll
+
+examples/aspect_extraction/model-info-Hitachi router-train\.conll
+
+examples/aspect_extraction/model-info-ipod-train\.conll
+
+examples/aspect_extraction/model-info-Linksys Router-train\.conll
+
+examples/aspect_extraction/model-info-MicroMP3-train\.conll
+
+examples/aspect_extraction/model-info-Nikon coolpix 4300-train\.conll
+
+examples/aspect_extraction/model-info-Nokia 6600-train\.conll
+
+examples/aspect_extraction/model-info-Nokia 6610-train\.conll
+
+examples/aspect_extraction/model-info-norton-train\.conll
+
+examples/aspect_extraction/model-info-Router-train\.conll
+
+examples/aspect_extraction/model-info-Speaker-train\.conll
