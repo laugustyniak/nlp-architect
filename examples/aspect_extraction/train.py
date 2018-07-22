@@ -20,7 +20,7 @@ import argparse
 import pickle
 import pprint
 from os import path
-from os.path import basename
+from os.path import basename, join
 
 from keras.utils import to_categorical
 
@@ -149,7 +149,8 @@ def run_aspect_sequence_tagging(
     pp.pprint(eval)
 
     # saving model
-    with open('models-nouns/model-info' + '-' + basename(train_file), 'wb') as fp:
+    models_output = join(models_output, 'model-info' + '-' + basename(train_file) + '.info')
+    with open(models_output, 'wb') as fp:
         info = {
             'sentence_len': sentence_length,
             'word_len': word_length,
@@ -169,6 +170,7 @@ def run_aspect_sequence_tagging(
             'test_file': test_file,
             'eval': eval
         }
+        print('Save model in: ' + models_output)
         pickle.dump(info, fp)
 
 

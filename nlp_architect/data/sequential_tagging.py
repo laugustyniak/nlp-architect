@@ -21,6 +21,7 @@ from __future__ import unicode_literals
 
 import numpy as np
 from keras.preprocessing.sequence import pad_sequences
+from tqdm import tqdm
 
 from nlp_architect.utils.embedding_augmentation import most_similar, filter_words_to_augment
 from nlp_architect.utils.text import Vocabulary
@@ -62,17 +63,16 @@ class SequentialTaggingDataset(object):
             word_vecs = []
             char_vecs = []
             tag_vecs = []
-            for tokens_original, tags in raw_sentences:
+            for tokens_original, tags in tqdm(raw_sentences[:3]):
                 n_augmentations = 0
                 tokens = tokens_original.copy()
                 n_tokens = len(tokens)
                 for token, augmentation, token_idx in filter_words_to_augment(tokens):
                     if augmentation and token_idx < n_tokens:
-                        for token_augmentation in most_similar(word=token, threshold=0.7):
+                        for token_augmentation in most_similar(word=token, threshold=0.8):
                             n_augmentations += 1
-                            print('Replacement: ', tokens[token_idx], ' with ', token_augmentation.text)
+                            # print('Replacement: ', tokens[token_idx], ' -> ', token_augmentation.text)
                             tokens[token_idx] = token_augmentation.text
-                            # print('Augmented sentence: ', tokens)
                             word_vecs.append(np.array([self.vocabs['token'].add(t) for t in tokens]))
                             word_chars = []
                             for t in tokens:
