@@ -72,3 +72,9 @@ examples/aspect_extraction/model-info-norton-train\.conll
 examples/aspect_extraction/model-info-Router-train\.conll
 
 examples/aspect_extraction/model-info-Speaker-train\.conll
+
+examples/aspect_extraction/CoNLL-2003/
+
+examples/aspect_extraction/models-baseline/
+
+examples/aspect_extraction/semeval/
