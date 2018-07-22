@@ -42,7 +42,6 @@ class SequentialTaggingDataset(object):
     def __init__(self,
                  train_file,
                  test_file,
-                 embedding_model,
                  max_sentence_length=30,
                  max_word_length=20,
                  tag_field_no=4
