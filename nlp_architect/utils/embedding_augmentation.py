@@ -11,11 +11,11 @@ def load_spacy(model):
 
 
 @lru_cache(None)
-def most_similar(word: str, threshold: float = 0.7):
+def most_similar(word: str, threshold: float = 0.8):
     nlp = load_spacy('en_vectors_web_lg')
     word = nlp.vocab[word]
     queries = [w for w in word.vocab if w.is_lower == word.is_lower and w.prob >= -15]
-    return [token for token in queries if word.similarity(token) > threshold]
+    return [token for token in queries if word.similarity(token) > threshold and _filter_pos(token)]
 
 
 def top_n_most_similar(word, n=10):
@@ -37,4 +37,9 @@ def filter_words_to_augment(tokens: List[str]):
 
 def _word_filter(token):
     # return not token.is_stop and not token.is_digit and not token.is_punct
-    return token.pos_ == 'NOUN'
+    return token.pos_ in ['NOUN', 'VERB', 'ADJ', 'ADV']
+
+
+def _filter_pos(word: str):
+    nlp = load_spacy('en_core_web_sm')
+    return _word_filter([w for w in nlp(word.text)][0])
