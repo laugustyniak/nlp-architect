@@ -19,10 +19,13 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+from collections import defaultdict
+
 import numpy as np
 from keras.preprocessing.sequence import pad_sequences
 from tqdm import tqdm
 
+from nlp_architect.utils.attr_dict import AttrDict
 from nlp_architect.utils.embedding_augmentation import most_similar, filter_words_to_augment
 from nlp_architect.utils.text import Vocabulary
 
@@ -38,73 +41,79 @@ class SequentialTaggingDataset(object):
         max_sentence_length (int, optional): max sentence length
         max_word_length (int, optional): max word length
         tag_field_no (int, optional): index of column to use a y-samples
+        augment_data (bool, optional): do we want to augment data with word embeddings similarity
     """
 
-    def __init__(self,
-                 train_file,
-                 test_file,
-                 max_sentence_length=30,
-                 max_word_length=20,
-                 tag_field_no=4
-                 ):
-        self.files = {'train': train_file,
-                      'test': test_file}
+    def __init__(
+            self,
+            train_file,
+            test_file,
+            max_sentence_length=30,
+            max_word_length=20,
+            tag_field_no=4,
+            augment_data=False,
+            similarity_threshold=0.8,
+    ):
+        self.similarity_threshold = similarity_threshold
+        self.augment_data = augment_data
+        self.files = {
+            'train': train_file,
+            'test': test_file
+        }
         self.max_sent_len = max_sentence_length
         self.max_word_len = max_word_length
         self.tf = tag_field_no
 
-        self.vocabs = {'token': Vocabulary(2),  # 0=pad, 1=unk
-                       'char': Vocabulary(2),  # 0=pad, 1=unk
-                       'tag': Vocabulary(1)}  # 0=pad
+        self.vocabs = {
+            'token': Vocabulary(2),  # 0=pad, 1=unk
+            'char': Vocabulary(2),  # 0=pad, 1=unk
+            'tag': Vocabulary(1)  # 0=pad
+        }
 
         self.data = {}
+        self.data_augmentation = AttrDict
+
         for f in self.files:
+
             raw_sentences = self._read_file(self.files[f])
-            word_vecs = []
-            char_vecs = []
-            tag_vecs = []
+            self.word_vecs = []
+            self.char_vecs = []
+            self.tag_vecs = []
+
             for tokens_original, tags in tqdm(raw_sentences):
-                n_augmentations = 0
                 tokens = tokens_original.copy()
-                n_tokens = len(tokens)
-                for token, augmentation, token_idx in filter_words_to_augment(tokens):
-                    if augmentation and token_idx < n_tokens:
-                        for token_augmentation in most_similar(word=token, threshold=0.8):
-                            n_augmentations += 1
-                            # print('Replacement: ', tokens[token_idx], ' -> ', token_augmentation.text)
-                            tokens[token_idx] = token_augmentation.text
-                            word_vecs.append(np.array([self.vocabs['token'].add(t) for t in tokens]))
-                            word_chars = []
-                            for t in tokens:
-                                word_chars.append(np.array([self.vocabs['char'].add(c) for c in t]))
-                            word_chars = pad_sequences(word_chars, maxlen=self.max_word_len)
-                            if self.max_sent_len - len(tokens) > 0:
-                                char_padding = self.max_sent_len - len(word_chars)
-                                char_vecs.append(
-                                    np.concatenate((np.zeros((char_padding, self.max_word_len)), word_chars),
-                                                   axis=0))
-                            else:
-                                char_vecs.append(word_chars[-self.max_sent_len:])
-                            tag_vecs.append(np.array([self.vocabs['tag'].add(t) for t in tags]))
-                    else:
-                        word_vecs.append(np.array([self.vocabs['token'].add(t) for t in tokens]))
-                        word_chars = []
-                        for t in tokens:
-                            word_chars.append(np.array([self.vocabs['char'].add(c) for c in t]))
-                        word_chars = pad_sequences(word_chars, maxlen=self.max_word_len)
-                        if self.max_sent_len - len(tokens) > 0:
-                            char_padding = self.max_sent_len - len(word_chars)
-                            char_vecs.append(
-                                np.concatenate((np.zeros((char_padding, self.max_word_len)), word_chars),
-                                               axis=0))
-                        else:
-                            char_vecs.append(word_chars[-self.max_sent_len:])
-                        tag_vecs.append(np.array([self.vocabs['tag'].add(t) for t in tags]))
-                print('# of augmentations', n_augmentations)
-            word_vecs = pad_sequences(word_vecs, maxlen=self.max_sent_len)
-            char_vecs = np.asarray(char_vecs)
-            tag_vecs = pad_sequences(tag_vecs, maxlen=self.max_sent_len)
-            self.data[f] = word_vecs, char_vecs, tag_vecs
+                if self.augment_data:
+                    self.data_augmentation.words = defaultdict(list)
+                    self.data_augmentation.sentences = defaultdict(list)
+                    n_tokens = len(tokens)
+                    for token, augmentation, token_idx in filter_words_to_augment(tokens):
+                        if token_idx < n_tokens:
+                            for token_augmentation in most_similar(word=token, threshold=self.similarity_threshold):
+                                self.data_augmentation.words[tokens[token_idx]].append(token_augmentation.text)
+                                self.data_augmentation.sentences[
+                                    tokens[token_idx] + '->' + token_augmentation.text].append(' '.join(tokens))
+                                tokens[token_idx] = token_augmentation.text
+                                self._featurize_data(tokens, tags)
+                else:
+                    self._featurize_data(tokens, tags)
+
+            self.word_vecs = pad_sequences(self.word_vecs, maxlen=self.max_sent_len)
+            self.char_vecs = np.asarray(self.char_vecs)
+            self.tag_vecs = pad_sequences(self.tag_vecs, maxlen=self.max_sent_len)
+            self.data[f] = self.word_vecs, self.char_vecs, self.tag_vecs
+
+    def _featurize_data(self, tokens, tags):
+        self.word_vecs.append(np.array([self.vocabs['token'].add(t) for t in tokens]))
+        word_chars = []
+        for token in tokens:
+            word_chars.append(np.array([self.vocabs['char'].add(char) for char in token]))
+        word_chars = pad_sequences(word_chars, maxlen=self.max_word_len)
+        if self.max_sent_len > len(tokens):
+            char_padding = self.max_sent_len - len(word_chars)
+            self.char_vecs.append(np.concatenate((np.zeros((char_padding, self.max_word_len)), word_chars), axis=0))
+        else:
+            self.char_vecs.append(word_chars[-self.max_sent_len:])
+        self.tag_vecs.append(np.array([self.vocabs['tag'].add(t) for t in tags]))
 
     @property
     def y_labels(self):

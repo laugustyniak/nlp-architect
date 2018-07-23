@@ -90,6 +90,8 @@ def run_aspect_sequence_tagging(
         test_file,
         embedding_model,
         models_output,
+        augment_data: bool,
+        similarity_threshold: float = 0.8,
         batch_size=10,
         epoch=50,
         tag_num=2,
@@ -103,7 +105,14 @@ def run_aspect_sequence_tagging(
 ):
     # load dataset and parameters
     dataset = SequentialTaggingDataset(
-        train_file, test_file, max_sentence_length=sentence_length, max_word_length=word_length, tag_field_no=tag_num)
+        train_file,
+        test_file,
+        augment_data=augment_data,
+        similarity_threshold=similarity_threshold,
+        max_sentence_length=sentence_length,
+        max_word_length=word_length,
+        tag_field_no=tag_num
+    )
 
     # get the train and test data sets
     x_train, x_char_train, y_train = dataset.train
@@ -168,7 +177,11 @@ def run_aspect_sequence_tagging(
             'external_embedding_model': embedding_model,
             'train_file': train_file,
             'test_file': test_file,
-            'eval': eval
+            'eval': eval,
+            'data_augmentation': dataset.data_augmentation,
+            'augment_data': augment_data,
+            'similarity_threshold': similarity_threshold,
+
         }
         print('Save model in: ' + models_output)
         pickle.dump(info, fp)

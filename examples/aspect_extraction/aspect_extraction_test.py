@@ -16,7 +16,9 @@ from train import run_aspect_sequence_tagging
     default='/home/lukasz/github/nlp/nlp-architect/examples/aspect_extraction/models-tmp',
     type=click.Path(exists=False)
 )
-def run_evaluation_multi_datasets(conll_files, embedding_model, models_output):
+@click.argument('augment_data', default=False, type=bool)
+@click.argument('similarity_threshold', default=0.8, type=float)
+def run_evaluation_multi_datasets(conll_files, embedding_model, models_output, augment_data, similarity_threshold):
     Path(models_output).mkdir(parents=True, exist_ok=True)
     datasets_path = Path(conll_files)
     conll_train_files = list(datasets_path.glob('*train.conll'))
@@ -31,7 +33,9 @@ def run_evaluation_multi_datasets(conll_files, embedding_model, models_output):
             embedding_model=embedding_model,
             models_output=models_output,
             tag_num=2,
-            epoch=20
+            epoch=50,
+            augment_data=augment_data,
+            similarity_threshold=similarity_threshold,
         )
 
 
