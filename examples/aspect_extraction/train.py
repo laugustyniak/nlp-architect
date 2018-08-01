@@ -91,7 +91,7 @@ def run_aspect_sequence_tagging(
         embedding_model,
         models_output,
         augment_data: bool,
-        similarity_threshold: float = 0.8,
+        similarity_threshold: float=0.8,
         batch_size=10,
         epoch=50,
         tag_num=2,
@@ -138,10 +138,10 @@ def run_aspect_sequence_tagging(
         word_lstm_dims=char_features_lstm_dims,
         tagger_lstm_dims=entity_tagger_lstm_dims,
         dropout=dropout,
-        external_embedding_model=embedding_model)
+        external_embedding_model=embedding_model
+    )
 
-    conll_cb = ConllCallback([x_test, x_char_test], y_test, dataset.y_labels,
-                             batch_size=batch_size)
+    conll_cb = ConllCallback([x_test, x_char_test], y_test, dataset.y_labels, batch_size=batch_size)
 
     aspect_model.fit(
         x=[x_train, x_char_train],
@@ -149,7 +149,8 @@ def run_aspect_sequence_tagging(
         batch_size=batch_size,
         epochs=epoch,
         callbacks=[conll_cb],
-        validation=([x_test, x_char_test], y_test))
+        validation=([x_test, x_char_test], y_test)
+    )
 
     # running predictions
     predictions = aspect_model.predict(x=[x_test, x_char_test], batch_size=1)
@@ -165,6 +166,7 @@ def run_aspect_sequence_tagging(
             'word_len': word_length,
             'num_of_labels': num_y_labels,
             'labels_id_to_word': {v: k for k, v in dataset.y_labels.items()},
+            'epoch': epoch,
             'word_vocab': dataset.word_vocab,
             'vocab_size': vocabulary_size,
             'char_vocab_size': char_vocabulary_size,
