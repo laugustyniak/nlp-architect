@@ -55,7 +55,7 @@ def run_evaluation_multi_datasets_and_multi_embeddings(
         click.echo('Embedding: ' + embedding)
         embedding_model = (EMBEDDINGS_PATH / embedding).as_posix()
         embedding_name = Path(embedding).stem
-        models_output = models_output + '/models-' + embedding_name
+        models_output = (Path(models_output) / ('models-' + embedding_name)).as_posix()
         Path(models_output).mkdir(parents=True, exist_ok=True)
 
         for dataset_file in tqdm(get_aspect_datasets(), desc='Datasets progress'):

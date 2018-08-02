@@ -90,8 +90,8 @@ def validate_input_args(args):
 def run_aspect_sequence_tagging(
         train_file,
         test_file,
-        embedding_model,
-        models_output,
+        embedding_model: str,
+        models_output: str,
         augment_data: bool,
         similarity_threshold: float=0.8,
         batch_size=10,
