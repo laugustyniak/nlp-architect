@@ -2,16 +2,16 @@ from collections import namedtuple
 from pathlib import Path
 from typing import Iterable
 
-from tqdm import tqdm
-
 import click
+from tqdm import tqdm
 from train import run_aspect_sequence_tagging
 
 DatasetFiles = namedtuple('Dataset', ['train_file', 'test_file'])
 
 EMBEDDINGS = [
     'glove.6B.50d.txt', 'glove.6B.100d.txt', 'glove.6B.200d.txt', 'glove.6B.300d.txt',
-    'glove.twitter.27B.25d.txt', 'glove.twitter.27B.50d.txt', 'glove.twitter.27B.100d.txt', 'glove.twitter.27B.200d.txt',
+    'glove.twitter.27B.25d.txt', 'glove.twitter.27B.50d.txt', 'glove.twitter.27B.100d.txt',
+    'glove.twitter.27B.200d.txt',
 ]
 EMBEDDINGS_PATH = Path('/home/lukasz/data/')
 CONLL_FILES_PATH = '/home/lukasz/github/phd/sentiment-backend/aspects/data/aspects/bing_liu/bio_tags'
@@ -49,49 +49,20 @@ def run_evaluation_multi_datasets(conll_files, embedding_model, models_output, a
         )
 
 
-def run_evaluation_multi_datasets_and_multi_embeddings():
+def run_evaluation_multi_datasets_and_multi_embeddings(
+        models_output: str='/home/lukasz/github/nlp/nlp-architect/examples/aspect_extraction'):
     for embedding in tqdm(EMBEDDINGS, desc='Embeddings progress'):
         click.echo('Embedding: ' + embedding)
-
         embedding_model = (EMBEDDINGS_PATH / embedding).as_posix()
         embedding_name = Path(embedding).stem
-        models_output = '/home/lukasz/github/nlp/nlp-architect/examples/aspect_extraction/models-' + embedding_name
+        models_output = models_output + '/models-' + embedding_name
         Path(models_output).mkdir(parents=True, exist_ok=True)
 
-
-        for train_file in tqdm(conll_train_files, desc='Datasets progress'):
-            test_file = [f for f in conll_test_files if train_file.stem.replace('train', '') in f.as_posix()][0]
-            click.echo('Dataset: ' + train_file.as_posix())
+        for dataset_file in tqdm(get_aspect_datasets(), desc='Datasets progress'):
+            click.echo('Dataset: ' + dataset_file.train_file.as_posix())
             run_aspect_sequence_tagging(
-                train_file=train_file.as_posix(),
-                test_file=test_file.as_posix(),
-                embedding_model=embedding_model,
-                models_output=models_output,
-                tag_num=2,
-                epoch=20,
-                augment_data=False,
-            )
-
-
-def run_evaluation_semeval_2014_and_multi_embeddings():
-    for embedding in tqdm(EMBEDDINGS, desc='Embeddings progress'):
-        click.echo('Embedding: ' + embedding)
-
-        embedding_model = (EMBEDDINGS_PATH / embedding).as_posix()
-        embedding_name = Path(embedding).stem
-        models_output = '/home/lukasz/github/nlp/nlp-architect/examples/aspect_extraction/models-' + embedding_name
-        Path(models_output).mkdir(parents=True, exist_ok=True)
-
-        datasets_path = Path(SEMEVAL_FILES_PATH)
-        conll_train_files = list(datasets_path.glob('restaurants-train.conll'))
-        conll_test_files = list(datasets_path.glob('restaurants-test.conll'))
-
-        for train_file in tqdm(conll_train_files, desc='Datasets progress'):
-            test_file = [f for f in conll_test_files if train_file.stem.replace('train', 'test') in f.as_posix()][0]
-            click.echo('Dataset: ' + train_file.as_posix())
-            run_aspect_sequence_tagging(
-                train_file=train_file.as_posix(),
-                test_file=test_file.as_posix(),
+                train_file=dataset_file.train_file.as_posix(),
+                test_file=dataset_file.test_file.as_posix(),
                 embedding_model=embedding_model,
                 models_output=models_output,
                 tag_num=2,
@@ -114,6 +85,4 @@ def get_aspect_datasets() -> Iterable[DatasetFiles]:
 
 
 if __name__ == '__main__':
-    datasets = get_aspect_datasets()
-    run_evaluation_semeval_2014_and_multi_embeddings()
-    # run_evaluation_multi_datasets_and_multi_embeddings()
+    run_evaluation_multi_datasets_and_multi_embeddings()
