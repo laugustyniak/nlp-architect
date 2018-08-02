@@ -22,7 +22,9 @@ import pprint
 from os import path
 from os.path import basename, join
 
+import click
 from keras.utils import to_categorical
+from pathlib import Path
 
 from nlp_architect.contrib.keras.callbacks import ConllCallback
 from nlp_architect.data.sequential_tagging import SequentialTaggingDataset
@@ -104,6 +106,11 @@ def run_aspect_sequence_tagging(
         dropout=0.2,
 ):
     # load dataset and parameters
+    models_output = join(models_output, 'model-info' + '-' + basename(train_file) + '.info')
+    if Path(models_output).exists():
+        click.echo('Model has been already computed and saved!')
+        return
+
     dataset = SequentialTaggingDataset(
         train_file,
         test_file,
@@ -159,7 +166,6 @@ def run_aspect_sequence_tagging(
     pp.pprint(eval)
 
     # saving model
-    models_output = join(models_output, 'model-info' + '-' + basename(train_file) + '.info')
     with open(models_output, 'wb') as fp:
         info = {
             'sentence_len': sentence_length,
