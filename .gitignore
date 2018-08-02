@@ -78,3 +78,7 @@ examples/aspect_extraction/CoNLL-2003/
 examples/aspect_extraction/models-baseline/
 
 examples/aspect_extraction/semeval/
+
+*.info
+
+examples/aspect_extraction/notebooks/\.ipynb_checkpoints/
