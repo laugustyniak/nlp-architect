@@ -9,11 +9,24 @@ from train import run_aspect_sequence_tagging
 DatasetFiles = namedtuple('Dataset', ['name', 'train_file', 'test_file'])
 
 EMBEDDINGS = [
-    'glove.6B.50d.txt', 'glove.6B.100d.txt', 'glove.6B.200d.txt', 'glove.6B.300d.txt',
-    'glove.twitter.27B.25d.txt', 'glove.twitter.27B.50d.txt', 'glove.twitter.27B.100d.txt',
+    'glove.6B.50d.txt',
+    'glove.6B.100d.txt',
+    'glove.6B.200d.txt',
+    'glove.6B.300d.txt',
+    'glove.twitter.27B.25d.txt',
+    'glove.twitter.27B.50d.txt',
+    'glove.twitter.27B.100d.txt',
     'glove.twitter.27B.200d.txt',
+    'glove.42B.300d.txt',
+    'glove.840B.300d.txt',
+    'numberbatch-en.txt',
+    'sentic2vec.csv',
+    'crawl-300d-2M.vec',
+    'wiki-news-300d-1M-subword.vec',
+    'wiki-news-300d-1M.vec',
+
 ]
-EMBEDDINGS_PATH = Path('/home/lukasz/data/')
+EMBEDDINGS_PATH = Path('/home/lukasz/data/embeddings/')
 CONLL_FILES_PATH = '/home/lukasz/github/phd/sentiment-backend/aspects/data/aspects/bing_liu/bio_tags'
 SEMEVAL_FILES_PATH = '/home/lukasz/github/nlp/nlp-architect/examples/aspect_extraction/semeval/2014'
 
