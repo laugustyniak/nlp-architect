@@ -6,7 +6,7 @@ import click
 from tqdm import tqdm
 from train import run_aspect_sequence_tagging
 
-DatasetFiles = namedtuple('Dataset', ['train_file', 'test_file'])
+DatasetFiles = namedtuple('Dataset', ['name', 'train_file', 'test_file'])
 
 EMBEDDINGS = [
     'glove.6B.50d.txt', 'glove.6B.100d.txt', 'glove.6B.200d.txt', 'glove.6B.300d.txt',
@@ -50,12 +50,12 @@ def run_evaluation_multi_datasets(conll_files, embedding_model, models_output, a
 
 
 def run_evaluation_multi_datasets_and_multi_embeddings(
-        models_output: str='/home/lukasz/github/nlp/nlp-architect/examples/aspect_extraction'):
+        models_output_path: str='/home/lukasz/github/nlp/nlp-architect/examples/aspect_extraction'):
     for embedding in tqdm(EMBEDDINGS, desc='Embeddings progress'):
         click.echo('Embedding: ' + embedding)
         embedding_model = (EMBEDDINGS_PATH / embedding).as_posix()
         embedding_name = Path(embedding).stem
-        models_output = (Path(models_output) / ('models-' + embedding_name)).as_posix()
+        models_output = (Path(models_output_path) / ('models-' + embedding_name)).as_posix()
         Path(models_output).mkdir(parents=True, exist_ok=True)
 
         for dataset_file in tqdm(get_aspect_datasets(), desc='Datasets progress'):
@@ -79,8 +79,8 @@ def get_aspect_datasets() -> Iterable[DatasetFiles]:
         test_files = list(datasets_path.glob('*test.conll'))
         for train_file in tqdm(train_files, desc='Datasets progress'):
             test_file = [f for f in test_files if train_file.stem.replace('train', 'test') == f.stem][0]
-            datasets.append(DatasetFiles(train_file=train_file, test_file=test_file))
-            click.echo('Dataset: ' + train_file.as_posix())
+            dataset_name = test_file.stem.replace('-test', '')
+            datasets.append(DatasetFiles(name=dataset_name, train_file=train_file, test_file=test_file))
     return datasets
 
 
