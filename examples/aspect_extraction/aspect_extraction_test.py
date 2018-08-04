@@ -9,6 +9,7 @@ from train import run_aspect_sequence_tagging
 DatasetFiles = namedtuple('Dataset', ['name', 'train_file', 'test_file'])
 
 EMBEDDINGS = [
+    # https://nlp.stanford.edu/projects/glove/
     'glove.6B.50d.txt',
     'glove.6B.100d.txt',
     'glove.6B.200d.txt',
@@ -19,11 +20,33 @@ EMBEDDINGS = [
     'glove.twitter.27B.200d.txt',
     'glove.42B.300d.txt',
     'glove.840B.300d.txt',
+
+    # https://github.com/commonsense/conceptnet-numberbatch
     'numberbatch-en.txt',
-    'sentic2vec.csv',
+
+    # http://sentic.net/downloads/
+    # 'sentic2vec.csv',
+
+    # fasttext
     'crawl-300d-2M.vec',
     'wiki-news-300d-1M-subword.vec',
     'wiki-news-300d-1M.vec',
+
+    # https://levyomer.wordpress.com/2014/04/25/dependency-based-word-embeddings/
+    'bow2.words',
+    'bow2.contexts',
+    'bow5.words',
+    'bow5.contexts',
+    'deps.words',
+    'deps.contexts',
+
+    # http://www.ims.uni-stuttgart.de/forschung/ressourcen/experiment-daten/sota-sentiment.html
+    'sota-google.txt',
+    'sota-retrofit-600.txt',
+    'sota-sswe-50.txt',
+    'sota-wiki-600.txt',
+
+    #
 
 ]
 EMBEDDINGS_PATH = Path('/home/lukasz/data/embeddings/')
