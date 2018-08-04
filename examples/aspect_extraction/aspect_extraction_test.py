@@ -9,6 +9,9 @@ from train import run_aspect_sequence_tagging
 DatasetFiles = namedtuple('Dataset', ['name', 'train_file', 'test_file'])
 
 EMBEDDINGS = [
+    # test
+    'sota-sswe-50.txt',
+
     # https://nlp.stanford.edu/projects/glove/
     'glove.6B.50d.txt',
     'glove.6B.100d.txt',
@@ -45,9 +48,6 @@ EMBEDDINGS = [
     'sota-retrofit-600.txt',
     'sota-sswe-50.txt',
     'sota-wiki-600.txt',
-
-    #
-
 ]
 EMBEDDINGS_PATH = Path('/home/lukasz/data/embeddings/')
 CONLL_FILES_PATH = '/home/lukasz/github/phd/sentiment-backend/aspects/data/aspects/bing_liu/bio_tags'
@@ -87,14 +87,14 @@ def run_evaluation_multi_datasets(conll_files, embedding_model, models_output, a
 
 def run_evaluation_multi_datasets_and_multi_embeddings(
         models_output_path: str='/home/lukasz/github/nlp/nlp-architect/examples/aspect_extraction'):
-    for embedding in tqdm(EMBEDDINGS, desc='Embeddings progress'):
+    for embedding in tqdm(EMBEDDINGS[:1], desc='Embeddings progress'):
         click.echo('Embedding: ' + embedding)
         embedding_model = (EMBEDDINGS_PATH / embedding).as_posix()
         embedding_name = Path(embedding).stem
         models_output = (Path(models_output_path) / ('models-' + embedding_name)).as_posix()
         Path(models_output).mkdir(parents=True, exist_ok=True)
 
-        for dataset_file in tqdm(get_aspect_datasets(), desc='Datasets progress'):
+        for dataset_file in tqdm(get_aspect_datasets()[:1], desc='Datasets progress'):
             click.echo('Dataset: ' + dataset_file.train_file.as_posix())
             run_aspect_sequence_tagging(
                 train_file=dataset_file.train_file.as_posix(),
@@ -104,6 +104,10 @@ def run_evaluation_multi_datasets_and_multi_embeddings(
                 tag_num=2,
                 epoch=20,
                 augment_data=False,
+                bilstm_layer=True,
+                crf_layer=True,
+                word_embedding_layer=True,
+                char_embedding_layer=True,
             )
 
 

@@ -21,14 +21,14 @@ import pickle
 import pprint
 from os import path
 from os.path import basename, join
+from pathlib import Path
 
 import click
 from keras.utils import to_categorical
-from pathlib import Path
 
 from nlp_architect.contrib.keras.callbacks import ConllCallback
 from nlp_architect.data.sequential_tagging import SequentialTaggingDataset
-from nlp_architect.models.ner_crf import NERCRF
+from nlp_architect.models.aspect_extraction import AspectExtraction
 from nlp_architect.utils.io import validate_existing_filepath, validate_parent_exists, validate
 from nlp_architect.utils.metrics import get_conll_scores
 
@@ -93,7 +93,7 @@ def run_aspect_sequence_tagging(
         embedding_model: str,
         models_output: str,
         augment_data: bool,
-        similarity_threshold: float=0.8,
+        similarity_threshold: float = 0.8,
         batch_size=10,
         epoch=50,
         tag_num=2,
@@ -104,9 +104,24 @@ def run_aspect_sequence_tagging(
         char_features_lstm_dims=25,
         entity_tagger_lstm_dims=100,
         dropout=0.2,
+        bilstm_layer: bool = True,
+        crf_layer: bool = True,
+        word_embedding_layer: bool = True,
+        char_embedding_layer: bool = True,
 ):
+    network_params = [
+        ('char', char_embedding_layer),
+        ('word', word_embedding_layer),
+        ('bilstm', bilstm_layer),
+        ('lstm', not bilstm_layer),
+        ('crf', crf_layer),
+    ]
+
+    network_params_string = '-'.join([param for param, flag in network_params if flag])
+
     # load dataset and parameters
-    models_output = join(models_output, 'model-info' + '-' + basename(train_file) + '.info')
+    models_output = join(
+        models_output, 'model-info' + '-' + network_params_string + '-' + basename(train_file) + '.info')
     if Path(models_output).exists():
         click.echo('Model has been already computed and saved!')
         return
@@ -132,7 +147,8 @@ def run_aspect_sequence_tagging(
     y_test = to_categorical(y_test, num_y_labels)
     y_train = to_categorical(y_train, num_y_labels)
 
-    aspect_model = NERCRF()
+    # aspect_model = NERCRF()
+    aspect_model = AspectExtraction()
     aspect_model.build(
         sentence_length,
         word_length,
@@ -145,7 +161,11 @@ def run_aspect_sequence_tagging(
         word_lstm_dims=char_features_lstm_dims,
         tagger_lstm_dims=entity_tagger_lstm_dims,
         dropout=dropout,
-        external_embedding_model=embedding_model
+        external_embedding_model=embedding_model,
+        bilstm_layer=bilstm_layer,
+        crf_layer=crf_layer,
+        word_embedding_layer=word_embedding_layer,
+        char_embedding_layer=char_embedding_layer
     )
 
     conll_cb = ConllCallback([x_test, x_char_test], y_test, dataset.y_labels, batch_size=batch_size)
@@ -189,6 +209,10 @@ def run_aspect_sequence_tagging(
             'data_augmentation': dataset.data_augmentation,
             'augment_data': augment_data,
             'similarity_threshold': similarity_threshold,
+            'bilstm_layer': bilstm_layer,
+            'crf_layer': crf_layer,
+            'word_embedding_layer': word_embedding_layer,
+            'char_embedding_layer': char_embedding_layer,
 
         }
         print('Save model in: ' + models_output)
