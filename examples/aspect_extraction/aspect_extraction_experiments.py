@@ -57,20 +57,19 @@ EMBEDDINGS = [
     ('sota-wiki-600.txt', 600),
 ]
 EMBEDDINGS_PATH = Path('/home/lukasz/data/embeddings/')
-CONLL_FILES_PATH = '/home/lukasz/github/phd/sentiment-backend/aspects/data/aspects/bing_liu/bio_tags'
-SEMEVAL_FILES_PATH = '/home/lukasz/github/nlp/nlp-architect/examples/aspect_extraction/semeval/2014'
+CONLL_FILES_PATH = 'data/aspects/bing_liu/bio_tags'
+SEMEVAL_FILES_PATH = 'semeval/2014'
 
 
-def run_evaluation_multi_datasets_and_multi_embeddings(
-        models_output_path: str = '/home/lukasz/github/nlp/nlp-architect/examples/aspect_extraction'):
-    for embedding, word_embedding_dims in tqdm(EMBEDDINGS[:1], desc='Embeddings progress'):
+def run_evaluation_multi_datasets_and_multi_embeddings(models_output_path: str = ''):
+    for embedding, word_embedding_dims in tqdm(EMBEDDINGS, desc='Embeddings progress'):
         click.echo('Embedding: ' + embedding)
         embedding_model = (EMBEDDINGS_PATH / embedding).as_posix()
         embedding_name = Path(embedding).stem
         models_output = (Path(models_output_path) / ('models-' + embedding_name)).as_posix()
         Path(models_output).mkdir(parents=True, exist_ok=True)
 
-        for dataset_file in tqdm(get_aspect_datasets()[:1], desc='Datasets progress'):
+        for dataset_file in tqdm(get_aspect_datasets(), desc='Datasets progress'):
             click.echo('Dataset: ' + dataset_file.train_file.as_posix())
             run_aspect_sequence_tagging(
                 train_file=dataset_file.train_file.as_posix(),
@@ -148,8 +147,8 @@ def run_aspect_sequence_tagging(
     dataset = SequentialTaggingDataset(
         train_file,
         test_file,
-        augment_data=augment_data,
-        similarity_threshold=similarity_threshold,
+        # augment_data=augment_data,
+        # similarity_threshold=similarity_threshold,
         max_sentence_length=sentence_length,
         max_word_length=word_length,
         tag_field_no=tag_num
@@ -232,7 +231,6 @@ def run_aspect_sequence_tagging(
             'crf_layer': crf_layer,
             'word_embedding_layer': word_embedding_flag,
             'char_embedding_layer': char_embedding_flag,
-
         }
         print('Save model in: ' + models_output)
         pickle.dump(info, fp)
