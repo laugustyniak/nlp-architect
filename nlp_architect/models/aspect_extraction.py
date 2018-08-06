@@ -3,7 +3,7 @@ from typing import Dict
 import numpy as np
 from keras import Input, Model
 from keras.layers import Embedding, Dropout, TimeDistributed, Bidirectional, LSTM, concatenate, \
-    Dense, Activation
+    Dense
 from keras_contrib.layers import CRF
 from keras_contrib.utils import save_load_utils
 

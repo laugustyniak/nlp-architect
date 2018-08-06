@@ -81,8 +81,8 @@ class SequentialTaggingDataset(object):
             self.tag_vecs = []
 
             for tokens_original, tags in tqdm(raw_sentences):
-                tokens = tokens_original.copy()
                 if self.augment_data:
+                    tokens = tokens_original.copy()
                     self.data_augmentation.words = defaultdict(list)
                     self.data_augmentation.sentences = defaultdict(list)
                     n_tokens = len(tokens)
@@ -95,7 +95,7 @@ class SequentialTaggingDataset(object):
                                 tokens[token_idx] = token_augmentation.text
                                 self._featurize_data(tokens, tags)
                 else:
-                    self._featurize_data(tokens, tags)
+                    self._featurize_data(tokens_original, tags)
 
             self.word_vecs = pad_sequences(self.word_vecs, maxlen=self.max_sent_len)
             self.char_vecs = np.asarray(self.char_vecs)

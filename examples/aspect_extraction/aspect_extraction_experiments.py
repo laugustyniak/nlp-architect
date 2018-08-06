@@ -4,12 +4,12 @@ import pickle
 import pprint
 from collections import namedtuple
 from os.path import basename, join
+from pathlib import Path
+from typing import Iterable
 
 import click
 from keras.utils import to_categorical
-from pathlib import Path
 from tqdm import tqdm
-from typing import Iterable
 
 from nlp_architect.contrib.keras.callbacks import ConllCallback
 from nlp_architect.data.sequential_tagging import SequentialTaggingDataset
@@ -20,7 +20,7 @@ DatasetFiles = namedtuple('Dataset', ['name', 'train_file', 'test_file'])
 
 EMBEDDINGS = [
     # test
-    ('sota-sswe-50.txt', 50),
+    # ('sota-sswe-50.txt', 50),
 
     # https://nlp.stanford.edu/projects/glove/
     ('glove.6B.50d.txt', 50),
@@ -78,6 +78,7 @@ def run_evaluation_multi_datasets_and_multi_embeddings(models_output_path: str =
                 models_output=models_output,
                 tag_num=2,
                 epoch=20,
+                dropout=0.5,
                 character_embedding_dims=25,
                 char_features_lstm_dims=25,
                 word_embedding_dims=word_embedding_dims,
@@ -224,7 +225,7 @@ def run_aspect_sequence_tagging(
             'train_file': train_file,
             'test_file': test_file,
             'eval': eval,
-            'data_augmentation': dataset.data_augmentation,
+            # 'data_augmentation': dataset.data_augmentation,
             'augment_data': augment_data,
             'similarity_threshold': similarity_threshold,
             'bilstm_layer': bilstm_layer,
