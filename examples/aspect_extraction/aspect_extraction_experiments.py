@@ -18,43 +18,49 @@ from nlp_architect.utils.metrics import get_conll_scores
 
 DatasetFiles = namedtuple('Dataset', ['name', 'train_file', 'test_file'])
 
+
+def filter_test_datasets(dataset_path: Path):
+    return True if {'restaurants', 'laptops', 'ipod', 'MicroMP3'}.intersection(
+        set(dataset_path.stem.split('-'))) else False
+
+
 EMBEDDINGS = [
     # test
-    # ('sota-sswe-50.txt', 50),
+    ('sota-sswe-50.txt', 50),
 
     # https://nlp.stanford.edu/projects/glove/
-    ('glove.6B.50d.txt', 50),
-    ('glove.6B.100d.txt', 100),
-    ('glove.6B.200d.txt', 200),
-    ('glove.6B.300d.txt', 300),
-    ('glove.twitter.27B.25d.txt', 25),
-    ('glove.twitter.27B.50d.txt', 50),
-    ('glove.twitter.27B.100d.txt', 100),
-    ('glove.twitter.27B.200d.txt', 200),
-    ('glove.42B.300d.txt', 300),
+    # ('glove.6B.50d.txt', 50),
+    # ('glove.6B.100d.txt', 100),
+    # ('glove.6B.200d.txt', 200),
+    # ('glove.6B.300d.txt', 300),
+    # ('glove.twitter.27B.25d.txt', 25),
+    # ('glove.twitter.27B.50d.txt', 50),
+    # ('glove.twitter.27B.100d.txt', 100),
+    # ('glove.twitter.27B.200d.txt', 200),
+    # ('glove.42B.300d.txt', 300),
     ('glove.840B.300d.txt', 300),
 
     # https://github.com/commonsense/conceptnet-numberbatch
-    ('numberbatch-en.txt', 300),
+    # ('numberbatch-en.txt', 300),
 
     # fasttext
-    ('crawl-300d-2M.vec', 300),
-    ('wiki-news-300d-1M-subword.vec', 300),
-    ('wiki-news-300d-1M.vec', 300),
+    # ('crawl-300d-2M.vec', 300),
+    # ('wiki-news-300d-1M-subword.vec', 300),
+    # ('wiki-news-300d-1M.vec', 300),
 
     # https://levyomer.wordpress.com/2014/04/25/dependency-based-word-embeddings/
-    ('bow2.words', 300),
-    ('bow2.contexts', 300),
-    ('bow5.words', 300),
-    ('bow5.contexts', 300),
-    ('deps.words', 300),
-    ('deps.contexts', 300),
+    # ('bow2.words', 300),
+    # ('bow2.contexts', 300),
+    # ('bow5.words', 300),
+    # ('bow5.contexts', 300),
+    # ('deps.words', 300),
+    # ('deps.contexts', 300),
 
     # http://www.ims.uni-stuttgart.de/forschung/ressourcen/experiment-daten/sota-sentiment.html
-    ('sota-google.txt', 300),
-    ('sota-retrofit-600.txt', 600),
-    ('sota-sswe-50.txt', 50),
-    ('sota-wiki-600.txt', 600),
+    # ('sota-google.txt', 300),
+    # ('sota-retrofit-600.txt', 600),
+    # ('sota-sswe-50.txt', 50),
+    # ('sota-wiki-600.txt', 600),
 ]
 EMBEDDINGS_PATH = Path('/home/lukasz/data/embeddings/')
 CONLL_FILES_PATH = 'data/aspects/bing_liu/bio_tags'
@@ -98,7 +104,8 @@ def get_aspect_datasets() -> Iterable[DatasetFiles]:
         datasets_path = Path(datasets_path)
         train_files = list(datasets_path.glob('*train.conll'))
         test_files = list(datasets_path.glob('*test.conll'))
-        for train_file in tqdm(train_files, desc='Datasets progress'):
+        for train_file in tqdm(filter(filter_test_datasets, train_files), desc='Datasets progress'):
+            print(train_file)
             test_file = [f for f in test_files if train_file.stem.replace('train', 'test') == f.stem][0]
             dataset_name = test_file.stem.replace('-test', '')
             datasets.append(DatasetFiles(name=dataset_name, train_file=train_file, test_file=test_file))
@@ -238,4 +245,6 @@ def run_aspect_sequence_tagging(
 
 
 if __name__ == '__main__':
-    run_evaluation_multi_datasets_and_multi_embeddings()
+    get_aspect_datasets()
+    # run_evaluation_multi_datasets_and_multi_embeddings()
+
