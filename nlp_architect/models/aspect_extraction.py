@@ -101,6 +101,8 @@ class AspectExtraction(object):
             char_embeddings = TimeDistributed(char_embedding_layer)(word_chars_input)
             if bilstm_layer:
                 char_embeddings = TimeDistributed(Bidirectional(LSTM(word_lstm_dims)))(char_embeddings)
+            else:
+                char_embeddings = TimeDistributed(LSTM(word_lstm_dims))(char_embeddings)
             char_embeddings = Dropout(dropout)(char_embeddings)
             all_features.append(char_embeddings)
 

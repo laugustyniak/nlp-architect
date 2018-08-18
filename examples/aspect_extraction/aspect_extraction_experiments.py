@@ -20,7 +20,12 @@ DatasetFiles = namedtuple('Dataset', ['name', 'train_file', 'test_file'])
 
 
 def filter_test_datasets(dataset_path: Path):
-    return True if {'restaurants', 'laptops', 'ipod', 'MicroMP3'}.intersection(
+    return True if {
+        'restaurants',
+        'laptops',
+        # 'ipod',
+        # 'MicroMP3'
+    }.intersection(
         set(dataset_path.stem.split('-'))) else False
 
 
@@ -62,7 +67,8 @@ EMBEDDINGS = [
     # ('sota-sswe-50.txt', 50),
     # ('sota-wiki-600.txt', 600),
 ]
-EMBEDDINGS_PATH = Path('/home/lukasz/data/embeddings/')
+# EMBEDDINGS_PATH = Path('/home/lukasz/data/embeddings/')
+EMBEDDINGS_PATH = Path('/home/laugustyniak/data/embeddings/')
 CONLL_FILES_PATH = 'data/aspects/bing_liu/bio_tags'
 SEMEVAL_FILES_PATH = 'semeval/2014'
 
@@ -83,7 +89,7 @@ def run_evaluation_multi_datasets_and_multi_embeddings(models_output_path: str =
                 embedding_model=embedding_model,
                 models_output=models_output,
                 tag_num=2,
-                epoch=20,
+                epoch=5,
                 dropout=0.5,
                 character_embedding_dims=25,
                 char_features_lstm_dims=25,
@@ -91,7 +97,7 @@ def run_evaluation_multi_datasets_and_multi_embeddings(models_output_path: str =
                 entity_tagger_lstm_dims=word_embedding_dims + 25,
                 tagger_fc_dims=word_embedding_dims + 25,
                 augment_data=False,
-                bilstm_layer=True,
+                bilstm_layer=False,
                 crf_layer=False,
                 word_embedding_flag=True,
                 char_embedding_flag=True,
@@ -105,7 +111,6 @@ def get_aspect_datasets() -> Iterable[DatasetFiles]:
         train_files = list(datasets_path.glob('*train.conll'))
         test_files = list(datasets_path.glob('*test.conll'))
         for train_file in tqdm(filter(filter_test_datasets, train_files), desc='Datasets progress'):
-            print(train_file)
             test_file = [f for f in test_files if train_file.stem.replace('train', 'test') == f.stem][0]
             dataset_name = test_file.stem.replace('-test', '')
             datasets.append(DatasetFiles(name=dataset_name, train_file=train_file, test_file=test_file))
@@ -245,6 +250,5 @@ def run_aspect_sequence_tagging(
 
 
 if __name__ == '__main__':
-    get_aspect_datasets()
-    # run_evaluation_multi_datasets_and_multi_embeddings()
+    run_evaluation_multi_datasets_and_multi_embeddings()
 
