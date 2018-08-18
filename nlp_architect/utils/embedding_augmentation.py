@@ -36,13 +36,13 @@ def filter_words_to_augment(tokens: List[str]):
     ]
 
 
-@lru_cache(maxsize=2048)
+@lru_cache(maxsize=100000)
 def _word_filter(token):
     # return not token.is_stop and not token.is_digit and not token.is_punct
     return token.pos_ in ['NOUN', 'VERB', 'ADJ', 'ADV']
 
 
-@lru_cache(maxsize=2048)
+@lru_cache(maxsize=100000)
 def _filter_pos(word: str):
     nlp = load_spacy('en_core_web_sm')
     return _word_filter([w for w in nlp(word.text)][0])

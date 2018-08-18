@@ -19,7 +19,9 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import pickle
 from collections import defaultdict
+from pathlib import Path
 
 import numpy as np
 from keras.preprocessing.sequence import pad_sequences
@@ -73,6 +75,15 @@ class SequentialTaggingDataset(object):
         self.data = {}
         self.data_augmentation = AttrDict
 
+        train_file_name = Path(train_file).stem.split('-')[0]
+        features_file_name = (
+                train_file_name +
+                '-similarity-' + str(similarity_threshold) +
+                '-max-sent-len-' + str(max_sentence_length) +
+                '-max-word-len-' + str(max_word_length)
+        )
+        features_path = Path(train_file).parent / 'features' / features_file_name
+
         for f in self.files:
 
             raw_sentences = self._read_file(self.files[f])
@@ -80,8 +91,15 @@ class SequentialTaggingDataset(object):
             self.char_vecs = []
             self.tag_vecs = []
 
-            for tokens_original, tags in tqdm(raw_sentences):
-                if self.augment_data:
+            if features_path.exists() and self.augment_data and f == 'train':
+                features_path.parent.mkdir(exist_ok=True)
+                with open(features_path.as_posix(), 'rb') as features_file:
+                    self.word_vecs, self.char_vecs, self.tag_vecs, self.data[f] = pickle.load(features_file)
+                    print(features_path.as_posix() + ' has bee loaded')
+                    continue
+
+            for tokens_original, tags in tqdm(raw_sentences, desc='Sentences for ' + train_file + ' -> ' + f):
+                if self.augment_data and f == 'train':
                     tokens = tokens_original.copy()
                     self.data_augmentation.words = defaultdict(list)
                     self.data_augmentation.sentences = defaultdict(list)
@@ -101,6 +119,11 @@ class SequentialTaggingDataset(object):
             self.char_vecs = np.asarray(self.char_vecs)
             self.tag_vecs = pad_sequences(self.tag_vecs, maxlen=self.max_sent_len)
             self.data[f] = self.word_vecs, self.char_vecs, self.tag_vecs
+
+            if self.augment_data and f == 'train':
+                with open(features_path.as_posix(), 'wb') as features_file:
+                    pickle.dump((self.word_vecs, self.char_vecs, self.tag_vecs, self.data['train']), features_file)
+                    print(features_path.as_posix() + ' has bee pickled!')
 
     def _featurize_data(self, tokens, tags):
         self.word_vecs.append(np.array([self.vocabs['token'].add(t) for t in tokens]))

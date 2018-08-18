@@ -108,7 +108,7 @@ def run_evaluation_multi_datasets_and_multi_embeddings(models_output_path: str =
                                 word_embedding_dims=word_embedding_dims,
                                 entity_tagger_lstm_dims=word_embedding_dims + character_embedding_dims,
                                 tagger_fc_dims=word_embedding_dims + character_embedding_dims,
-                                augment_data=False,
+                                augment_data=True,
                                 bilstm_layer=bilstm_layer,
                                 crf_layer=crf_layer,
                                 word_embedding_flag=word_embedding_flag,
@@ -159,6 +159,7 @@ def run_aspect_sequence_tagging(
         ('lstm', not bilstm_layer),
         ('crf', crf_layer),
         (str(epoch) + 'epochs', True),
+        (str(similarity_threshold) + 'augmented', augment_data),
     ]
 
     network_params_string = '-'.join([param for param, flag in network_params if flag])
@@ -173,8 +174,8 @@ def run_aspect_sequence_tagging(
     dataset = SequentialTaggingDataset(
         train_file,
         test_file,
-        # augment_data=augment_data,
-        # similarity_threshold=similarity_threshold,
+        augment_data=augment_data,
+        similarity_threshold=similarity_threshold,
         max_sentence_length=sentence_length,
         max_word_length=word_length,
         tag_field_no=tag_num
