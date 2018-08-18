@@ -80,6 +80,8 @@ def run_evaluation_multi_datasets_and_multi_embeddings(models_output_path: str =
         for crf_layer in tf:
             for word_embedding_flag in tf:
                 for char_embedding_flag in tf:
+                    if not word_embedding_flag and not char_embedding_flag:
+                        continue
 
                     for embedding, word_embedding_dims in tqdm(EMBEDDINGS, desc='Embeddings progress'):
                         click.echo('Embedding: ' + embedding)
@@ -99,7 +101,7 @@ def run_evaluation_multi_datasets_and_multi_embeddings(models_output_path: str =
                                 embedding_model=embedding_model,
                                 models_output=models_output,
                                 tag_num=2,
-                                epoch=5,
+                                epoch=15,
                                 dropout=0.5,
                                 character_embedding_dims=character_embedding_dims,
                                 char_features_lstm_dims=character_embedding_dims,
@@ -156,6 +158,7 @@ def run_aspect_sequence_tagging(
         ('bilstm', bilstm_layer),
         ('lstm', not bilstm_layer),
         ('crf', crf_layer),
+        (str(epoch) + 'epochs', True),
     ]
 
     network_params_string = '-'.join([param for param, flag in network_params if flag])
