@@ -23,8 +23,8 @@ def filter_test_datasets(dataset_path: Path):
     return True if {
         'restaurants',
         'laptops',
-        # 'ipod',
-        # 'MicroMP3'
+        'ipod',
+        'MicroMP3'
     }.intersection(
         set(dataset_path.stem.split('-'))) else False
 
@@ -74,34 +74,44 @@ SEMEVAL_FILES_PATH = 'semeval/2014'
 
 
 def run_evaluation_multi_datasets_and_multi_embeddings(models_output_path: str = ''):
-    for embedding, word_embedding_dims in tqdm(EMBEDDINGS, desc='Embeddings progress'):
-        click.echo('Embedding: ' + embedding)
-        embedding_model = (EMBEDDINGS_PATH / embedding).as_posix()
-        embedding_name = Path(embedding).stem
-        models_output = (Path(models_output_path) / ('models-' + embedding_name)).as_posix()
-        Path(models_output).mkdir(parents=True, exist_ok=True)
+    tf = [True, False]
 
-        for dataset_file in tqdm(get_aspect_datasets(), desc='Datasets progress'):
-            click.echo('Dataset: ' + dataset_file.train_file.as_posix())
-            run_aspect_sequence_tagging(
-                train_file=dataset_file.train_file.as_posix(),
-                test_file=dataset_file.test_file.as_posix(),
-                embedding_model=embedding_model,
-                models_output=models_output,
-                tag_num=2,
-                epoch=5,
-                dropout=0.5,
-                character_embedding_dims=25,
-                char_features_lstm_dims=25,
-                word_embedding_dims=word_embedding_dims,
-                entity_tagger_lstm_dims=word_embedding_dims + 25,
-                tagger_fc_dims=word_embedding_dims + 25,
-                augment_data=False,
-                bilstm_layer=False,
-                crf_layer=False,
-                word_embedding_flag=True,
-                char_embedding_flag=True,
-            )
+    for bilstm_layer in tf:
+        for crf_layer in tf:
+            for word_embedding_flag in tf:
+                for char_embedding_flag in tf:
+
+                    for embedding, word_embedding_dims in tqdm(EMBEDDINGS, desc='Embeddings progress'):
+                        click.echo('Embedding: ' + embedding)
+                        embedding_model = (EMBEDDINGS_PATH / embedding).as_posix()
+                        embedding_name = Path(embedding).stem
+                        models_output = (Path(models_output_path) / ('models-' + embedding_name)).as_posix()
+                        Path(models_output).mkdir(parents=True, exist_ok=True)
+
+                        word_embedding_dims = word_embedding_dims if word_embedding_flag else 0
+                        character_embedding_dims = 25 if char_embedding_flag else 0
+
+                        for dataset_file in tqdm(get_aspect_datasets(), desc='Datasets progress'):
+                            click.echo('Dataset: ' + dataset_file.train_file.as_posix())
+                            run_aspect_sequence_tagging(
+                                train_file=dataset_file.train_file.as_posix(),
+                                test_file=dataset_file.test_file.as_posix(),
+                                embedding_model=embedding_model,
+                                models_output=models_output,
+                                tag_num=2,
+                                epoch=5,
+                                dropout=0.5,
+                                character_embedding_dims=character_embedding_dims,
+                                char_features_lstm_dims=character_embedding_dims,
+                                word_embedding_dims=word_embedding_dims,
+                                entity_tagger_lstm_dims=word_embedding_dims + character_embedding_dims,
+                                tagger_fc_dims=word_embedding_dims + character_embedding_dims,
+                                augment_data=False,
+                                bilstm_layer=bilstm_layer,
+                                crf_layer=crf_layer,
+                                word_embedding_flag=word_embedding_flag,
+                                char_embedding_flag=char_embedding_flag,
+                            )
 
 
 def get_aspect_datasets() -> Iterable[DatasetFiles]:
@@ -171,6 +181,18 @@ def run_aspect_sequence_tagging(
     x_train, x_char_train, y_train = dataset.train
     x_test, x_char_test, y_test = dataset.test
 
+    if word_embedding_flag and char_embedding_flag:
+        x_train = [x_train, x_char_train]
+        x_test = [x_test, x_char_test]
+    elif word_embedding_flag and not char_embedding_flag:
+        x_train = x_train
+        x_test = x_test
+    elif not word_embedding_flag and char_embedding_flag:
+        x_train = x_char_train
+        x_test = x_char_test
+    else:
+        raise Exception('Wrong features')
+
     num_y_labels = len(dataset.y_labels) + 1
     vocabulary_size = dataset.word_vocab_size + 1
     char_vocabulary_size = dataset.char_vocab_size + 1
@@ -199,19 +221,19 @@ def run_aspect_sequence_tagging(
         char_embedding_flag=char_embedding_flag,
     )
 
-    conll_cb = ConllCallback([x_test, x_char_test], y_test, dataset.y_labels, batch_size=batch_size)
+    conll_cb = ConllCallback(x_test, y_test, dataset.y_labels, batch_size=batch_size)
 
     aspect_model.fit(
-        x=[x_train, x_char_train],
+        x=x_train,
         y=y_train,
         batch_size=batch_size,
         epochs=epoch,
         callbacks=[conll_cb],
-        validation=([x_test, x_char_test], y_test)
+        validation=(x_test, y_test)
     )
 
     # running predictions
-    predictions = aspect_model.predict(x=[x_test, x_char_test], batch_size=1)
+    predictions = aspect_model.predict(x=x_test, batch_size=1)
     eval = get_conll_scores(predictions, y_test, {v: k for k, v in dataset.y_labels.items()})
     pp = pprint.PrettyPrinter(indent=4)
     pp.pprint(eval)
@@ -251,4 +273,3 @@ def run_aspect_sequence_tagging(
 
 if __name__ == '__main__':
     run_evaluation_multi_datasets_and_multi_embeddings()
-

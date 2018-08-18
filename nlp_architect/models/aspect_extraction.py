@@ -53,14 +53,13 @@ class AspectExtraction(object):
             external_embedding_model (str): path to external word embedding model
         """
         all_inputs = []
-
-        # build word input
-        words_input = Input(shape=(sentence_length,), name='words_input')
-        all_inputs.append(words_input)
-
         all_features = []
 
         if word_embedding_flag:
+            # build word input
+            words_input = Input(shape=(sentence_length,), name='words_input')
+            all_inputs.append(words_input)
+
             if external_embedding_model is not None:
                 # load and prepare external word embedding
                 external_emb, ext_emb_size = load_word_embeddings(external_embedding_model)
@@ -110,7 +109,6 @@ class AspectExtraction(object):
         if len(all_features) > 1:
             features = concatenate(all_features, axis=-1)
         elif len(all_features) == 1:
-            # FIXME fix dimensionality
             features = all_features[0]
         else:
             raise ValueError('You must choose word/char/both embeddings.')
