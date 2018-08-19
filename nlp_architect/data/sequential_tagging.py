@@ -92,7 +92,6 @@ class SequentialTaggingDataset(object):
             self.tag_vecs = []
 
             if features_path.exists() and self.augment_data and f == 'train':
-                features_path.parent.mkdir(exist_ok=True)
                 with open(features_path.as_posix(), 'rb') as features_file:
                     self.word_vecs, self.char_vecs, self.tag_vecs, self.data[f] = pickle.load(features_file)
                     print(features_path.as_posix() + ' has bee loaded')
@@ -121,6 +120,7 @@ class SequentialTaggingDataset(object):
             self.data[f] = self.word_vecs, self.char_vecs, self.tag_vecs
 
             if self.augment_data and f == 'train':
+                features_path.parent.mkdir(exist_ok=True)
                 with open(features_path.as_posix(), 'wb') as features_file:
                     pickle.dump((self.word_vecs, self.char_vecs, self.tag_vecs, self.data['train']), features_file)
                     print(features_path.as_posix() + ' has bee pickled!')
