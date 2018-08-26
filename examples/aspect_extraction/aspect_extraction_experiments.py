@@ -66,6 +66,9 @@ EMBEDDINGS = [
     # ('sota-retrofit-600.txt', 600),
     # ('sota-sswe-50.txt', 50),
     # ('sota-wiki-600.txt', 600),
+
+    # Cambria CNN aspects based on Amazon reviews
+    ('sentic2vec.txt', 300),
 ]
 # EMBEDDINGS_PATH = Path('/home/lukasz/data/embeddings/')
 EMBEDDINGS_PATH = Path('/home/laugustyniak/data/embeddings/')
