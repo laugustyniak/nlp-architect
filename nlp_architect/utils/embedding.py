@@ -21,6 +21,7 @@ from __future__ import unicode_literals
 from functools import lru_cache
 
 import numpy as np
+from tqdm import tqdm
 
 
 @lru_cache(None)
@@ -39,7 +40,7 @@ def load_word_embeddings(file_path):
         word_vectors = {}
         size = None
         try:
-            for line in fp:
+            for line in tqdm(fp, desc=file_path + ': embedding loading'):
                 line_fields = line.split()
                 if len(line_fields) < 5:
                     continue
