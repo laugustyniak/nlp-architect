@@ -1,11 +1,17 @@
-from typing import Dict
-
 import numpy as np
 from keras import Input, Model
-from keras.layers import Embedding, Dropout, TimeDistributed, Bidirectional, LSTM, concatenate, \
-    Dense
+from keras.layers import (
+    Embedding,
+    Dropout,
+    TimeDistributed,
+    Bidirectional,
+    LSTM,
+    Dense,
+    concatenate,
+)
 from keras_contrib.layers import CRF
 from keras_contrib.utils import save_load_utils
+from typing import Dict
 
 from nlp_architect.utils.embedding import load_word_embeddings
 
