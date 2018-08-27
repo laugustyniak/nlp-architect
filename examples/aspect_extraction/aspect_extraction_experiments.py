@@ -4,12 +4,13 @@ import pickle
 import pprint
 from collections import namedtuple
 from os.path import basename, join
-from pathlib import Path
-from typing import Iterable
 
 import click
+from keras.callbacks import TensorBoard, EarlyStopping, ModelCheckpoint
 from keras.utils import to_categorical
+from pathlib import Path
 from tqdm import tqdm
+from typing import Iterable
 
 from nlp_architect.contrib.keras.callbacks import ConllCallback
 from nlp_architect.data.sequential_tagging import SequentialTaggingDataset
@@ -18,30 +19,19 @@ from nlp_architect.utils.metrics import get_conll_scores
 
 DatasetFiles = namedtuple('Dataset', ['name', 'train_file', 'test_file'])
 
-
-def filter_test_datasets(dataset_path: Path):
-    return True if {
-        'restaurants',
-        'laptops',
-        'ipod',
-        'MicroMP3'
-    }.intersection(
-        set(dataset_path.stem.split('-'))) else False
-
-
 EMBEDDINGS = [
     # test
-    ('sota-sswe-50.txt', 50),
+    # ('sota-sswe-50.txt', 50),
 
     # https://nlp.stanford.edu/projects/glove/
-    # ('glove.6B.50d.txt', 50),
+    ('glove.6B.50d.txt', 50),
     # ('glove.6B.100d.txt', 100),
     # ('glove.6B.200d.txt', 200),
     # ('glove.6B.300d.txt', 300),
     # ('glove.twitter.27B.25d.txt', 25),
     # ('glove.twitter.27B.50d.txt', 50),
     # ('glove.twitter.27B.100d.txt', 100),
-    # ('glove.twitter.27B.200d.txt', 200),
+    ('glove.twitter.27B.200d.txt', 200),
     # ('glove.42B.300d.txt', 300),
     ('glove.840B.300d.txt', 300),
 
@@ -49,7 +39,7 @@ EMBEDDINGS = [
     # ('numberbatch-en.txt', 300),
 
     # fasttext
-    # ('crawl-300d-2M.vec', 300),
+    ('crawl-300d-2M.vec', 300),
     # ('wiki-news-300d-1M-subword.vec', 300),
     # ('wiki-news-300d-1M.vec', 300),
 
@@ -64,68 +54,74 @@ EMBEDDINGS = [
     # http://www.ims.uni-stuttgart.de/forschung/ressourcen/experiment-daten/sota-sentiment.html
     # ('sota-google.txt', 300),
     # ('sota-retrofit-600.txt', 600),
-    # ('sota-sswe-50.txt', 50),
+    ('sota-sswe-50.txt', 50),
     # ('sota-wiki-600.txt', 600),
 
     # Cambria CNN aspects based on Amazon reviews
     ('sentic2vec.txt', 300),
 ]
-# EMBEDDINGS_PATH = Path('/home/lukasz/data/embeddings/')
+
 EMBEDDINGS_PATH = Path('/home/laugustyniak/data/embeddings/')
-CONLL_FILES_PATH = 'data/aspects/bing_liu/bio_tags'
-SEMEVAL_FILES_PATH = 'semeval/2014'
+DATASETS_PATS = [
+    # 'data/aspects/bing_liu/bio_tags',
+    'semeval/2014',
+]
+TAG_NUM = 2
+TF = [True]
 
 
-def run_evaluation_multi_datasets_and_multi_embeddings(models_output_path: str = ''):
-    tf = [True, False]
+def run_evaluation_multi_datasets_and_multi_embeddings():
 
-    for bilstm_layer in tf:
-        for crf_layer in tf:
-            for word_embedding_flag in tf:
-                for char_embedding_flag in tf:
-                    if not word_embedding_flag and not char_embedding_flag:
-                        continue
+    for augment_data in [False]:
+        for char_embedding_flag in [True, False]:
+            for crf_layer in TF:
+                for word_embedding_flag in TF:
+                    for bilstm_layer in TF:
 
-                    for embedding, word_embedding_dims in tqdm(EMBEDDINGS, desc='Embeddings progress'):
-                        click.echo('Embedding: ' + embedding)
-                        embedding_model = (EMBEDDINGS_PATH / embedding).as_posix()
-                        embedding_name = Path(embedding).stem
-                        models_output = (Path(models_output_path) / ('models-' + embedding_name)).as_posix()
-                        Path(models_output).mkdir(parents=True, exist_ok=True)
+                        # we can't process without vectorization
+                        if not word_embedding_flag and not char_embedding_flag:
+                            continue
 
-                        word_embedding_dims = word_embedding_dims if word_embedding_flag else 0
-                        character_embedding_dims = 25 if char_embedding_flag else 0
+                        for embedding, word_embedding_dims in tqdm(EMBEDDINGS, desc='Embeddings progress'):
+                            click.echo('Embedding: ' + embedding)
+                            embedding_model = EMBEDDINGS_PATH / embedding
+                            embedding_name = Path(embedding).stem
+                            models_output = Path('models') / embedding_name
+                            models_output.mkdir(parents=True, exist_ok=True)
 
-                        for dataset_file in tqdm(get_aspect_datasets(), desc='Datasets progress'):
-                            click.echo('Dataset: ' + dataset_file.train_file.as_posix())
-                            run_aspect_sequence_tagging(
-                                train_file=dataset_file.train_file.as_posix(),
-                                test_file=dataset_file.test_file.as_posix(),
-                                embedding_model=embedding_model,
-                                models_output=models_output,
-                                tag_num=2,
-                                epoch=15,
-                                dropout=0.5,
-                                character_embedding_dims=character_embedding_dims,
-                                char_features_lstm_dims=character_embedding_dims,
-                                word_embedding_dims=word_embedding_dims,
-                                entity_tagger_lstm_dims=word_embedding_dims + character_embedding_dims,
-                                tagger_fc_dims=word_embedding_dims + character_embedding_dims,
-                                augment_data=True,
-                                bilstm_layer=bilstm_layer,
-                                crf_layer=crf_layer,
-                                word_embedding_flag=word_embedding_flag,
-                                char_embedding_flag=char_embedding_flag,
-                            )
+                            word_embedding_dims = word_embedding_dims if word_embedding_flag else 0
+                            character_embedding_dims = 25 if char_embedding_flag else 0
+
+                            for dataset_file in tqdm(get_aspect_datasets(), desc='Datasets progress'):
+                                click.echo('Dataset: ' + dataset_file.train_file.as_posix())
+                                run_aspect_sequence_tagging(
+                                    train_file=dataset_file.train_file.as_posix(),
+                                    test_file=dataset_file.test_file.as_posix(),
+                                    embedding_model=embedding_model.as_posix(),
+                                    models_path=models_output.as_posix(),
+                                    tag_num=TAG_NUM,
+                                    epoch=10,
+                                    dropout=0.5,
+                                    character_embedding_dims=character_embedding_dims,
+                                    char_features_lstm_dims=character_embedding_dims,
+                                    word_embedding_dims=word_embedding_dims,
+                                    entity_tagger_lstm_dims=word_embedding_dims + character_embedding_dims,
+                                    tagger_fc_dims=word_embedding_dims + character_embedding_dims,
+                                    augment_data=augment_data,
+                                    bilstm_layer=bilstm_layer,
+                                    crf_layer=crf_layer,
+                                    word_embedding_flag=word_embedding_flag,
+                                    char_embedding_flag=char_embedding_flag,
+                                )
 
 
 def get_aspect_datasets() -> Iterable[DatasetFiles]:
     datasets = []
-    for datasets_path in tqdm([CONLL_FILES_PATH, SEMEVAL_FILES_PATH]):
+    for datasets_path in tqdm(DATASETS_PATS, desc='Datasets'):
         datasets_path = Path(datasets_path)
         train_files = list(datasets_path.glob('*train.conll'))
         test_files = list(datasets_path.glob('*test.conll'))
-        for train_file in tqdm(filter(filter_test_datasets, train_files), desc='Datasets progress'):
+        for train_file in tqdm(train_files, desc='Datasets progress'):
             test_file = [f for f in test_files if train_file.stem.replace('train', 'test') == f.stem][0]
             dataset_name = test_file.stem.replace('-test', '')
             datasets.append(DatasetFiles(name=dataset_name, train_file=train_file, test_file=test_file))
@@ -135,7 +131,7 @@ def get_aspect_datasets() -> Iterable[DatasetFiles]:
 def run_aspect_sequence_tagging(
         train_file,
         test_file,
-        models_output: str,
+        models_path: str,
         augment_data: bool,
         embedding_model: str,
         word_embedding_dims: int,
@@ -167,16 +163,21 @@ def run_aspect_sequence_tagging(
 
     network_params_string = '-'.join([param for param, flag in network_params if flag])
 
+    trained_models_path = Path('trained', models_path)
+    trained_models_path.mkdir(exist_ok=True, parents=True)
+    logs_path = Path('logs', models_path)
+    logs_path.mkdir(exist_ok=True, parents=True)
+
     # load dataset and parameters
-    models_output = join(
-        models_output, 'model-info' + '-' + network_params_string + '-' + basename(train_file) + '.info')
-    if Path(models_output).exists():
+    model_name = 'model-info' + '-' + network_params_string + '-' + basename(train_file) + '.info'
+    models_path = join(models_path, model_name)
+    if Path(models_path).exists():
         click.echo('Model has been already computed and saved!')
         return
 
     dataset = SequentialTaggingDataset(
-        train_file,
-        test_file,
+        train_file=train_file,
+        test_file=test_file,
         augment_data=augment_data,
         similarity_threshold=similarity_threshold,
         max_sentence_length=sentence_length,
@@ -228,14 +229,24 @@ def run_aspect_sequence_tagging(
         char_embedding_flag=char_embedding_flag,
     )
 
-    conll_cb = ConllCallback(x_test, y_test, dataset.y_labels, batch_size=batch_size)
+    # Set callback functions to early stop training and save the best model so far
+    callbacks = [
+        ConllCallback(x_test, y_test, dataset.y_labels, batch_size=batch_size),
+        TensorBoard(log_dir=(logs_path / model_name).as_posix()),
+        EarlyStopping(monitor='val_loss', patience=2),
+        ModelCheckpoint(
+            filepath=(trained_models_path / '{}-best_model.h5'.format(model_name)).as_posix(),
+            monitor='val_loss',
+            save_best_only=True
+        )
+    ]
 
     aspect_model.fit(
         x=x_train,
         y=y_train,
         batch_size=batch_size,
         epochs=epoch,
-        callbacks=[conll_cb],
+        callbacks=callbacks,
         validation=(x_test, y_test)
     )
 
@@ -246,7 +257,7 @@ def run_aspect_sequence_tagging(
     pp.pprint(eval)
 
     # saving model
-    with open(models_output, 'wb') as fp:
+    with open(models_path, 'wb') as fp:
         info = {
             'sentence_len': sentence_length,
             'word_len': word_length,
@@ -273,8 +284,11 @@ def run_aspect_sequence_tagging(
             'crf_layer': crf_layer,
             'word_embedding_layer': word_embedding_flag,
             'char_embedding_layer': char_embedding_flag,
+            'predictions': predictions,
+            'y_test': y_test,
+            'y_labels': dataset.y_labels
         }
-        print('Save model in: ' + models_output)
+        print('Save model in: ' + models_path)
         pickle.dump(info, fp)
 
 
