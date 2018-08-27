@@ -68,10 +68,10 @@ DATASETS_PATS = [
 ]
 TAG_NUM = 2
 TF = [True]
+EPOCHS = 25
 
 
 def run_evaluation_multi_datasets_and_multi_embeddings():
-
     for augment_data in [False]:
         for char_embedding_flag in [True, False]:
             for crf_layer in TF:
@@ -100,7 +100,7 @@ def run_evaluation_multi_datasets_and_multi_embeddings():
                                     embedding_model=embedding_model.as_posix(),
                                     models_path=models_output.as_posix(),
                                     tag_num=TAG_NUM,
-                                    epoch=10,
+                                    epoch=EPOCHS,
                                     dropout=0.5,
                                     character_embedding_dims=character_embedding_dims,
                                     char_features_lstm_dims=character_embedding_dims,
