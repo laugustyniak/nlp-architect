@@ -14,10 +14,10 @@
 # limitations under the License.
 # ******************************************************************************
 
+from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-from __future__ import absolute_import
 
 from keras.callbacks import Callback
 
@@ -44,8 +44,18 @@ class ConllCallback(Callback):
         self.y_vocab = {v: k for k, v in y_vocab.items()}
         self.bsz = batch_size
 
+    def on_train_begin(self, logs={}):
+        self.f1s = []
+        self.precisions = []
+        self.recalls = []
+
     def on_epoch_end(self, epoch, logs=None):
         predictions = self.model.predict(self.x, batch_size=self.bsz)
-        f1 = get_conll_scores(predictions, self.y, self.y_vocab)[0][-1]
+        precision = get_conll_scores(predictions, self.y, self.y_vocab)[0][0]
+        recall = get_conll_scores(predictions, self.y, self.y_vocab)[0][1]
+        f1 = get_conll_scores(predictions, self.y, self.y_vocab)[0][2]
+        self.precisions.append(precision)
+        self.recalls.append(recall)
+        self.f1s.append(f1)
         print()
-        print('Conll eval F1: {}'.format(f1))
+        print('Conll eval F1: {}, Precision: {}, Recall: {}'.format(f1, precision, recall))
