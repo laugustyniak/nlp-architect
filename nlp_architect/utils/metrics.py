@@ -38,6 +38,16 @@ def run_conlleval(data):
 
 
 def get_conll_scores(predictions, y, y_lex):
+    prediction_data = get_y_label_and_prediction_tuples(predictions, y, y_lex)
+    data = []
+    for s in prediction_data:
+        for t, l, p in zip(*s):
+            data.append('{} {} {}\n'.format(t, l, p))
+        data.append('\n')
+    return run_conlleval(data)
+
+
+def get_y_label_and_prediction_tuples(predictions, y, y_lex):
     if type(predictions) == list:
         predictions = predictions[-1]
     test_p = predictions
@@ -56,9 +66,4 @@ def get_conll_scores(predictions, y, y_lex):
                 prediction_y[i] = y_lex[j]
         prediction_data.append((test_yval, test_yval, prediction_y))
 
-    data = []
-    for s in prediction_data:
-        for t, l, p in zip(*s):
-            data.append('{} {} {}\n'.format(t, l, p))
-        data.append('\n')
-    return run_conlleval(data)
+    return prediction_data
