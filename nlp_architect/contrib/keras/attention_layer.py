@@ -1,4 +1,5 @@
-########################################
+# referrence Code:https://www.kaggle.com/lystdo/lstm-with-word2vec-embeddings
+
 from keras import backend as K
 from keras import initializers, regularizers, constraints
 from keras.engine.topology import Layer
