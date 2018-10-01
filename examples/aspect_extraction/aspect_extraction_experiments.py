@@ -20,8 +20,6 @@ from nlp_architect.utils.metrics import get_conll_scores
 DatasetFiles = namedtuple('Dataset', ['name', 'train_file', 'test_file'])
 
 EMBEDDINGS = [
-    # test
-    # ('sota-sswe-50.txt', 50),
 
     # https://nlp.stanford.edu/projects/glove/
     ('glove.6B.50d.txt', 50),
@@ -31,12 +29,12 @@ EMBEDDINGS = [
     # ('glove.twitter.27B.25d.txt', 25),
     # ('glove.twitter.27B.50d.txt', 50),
     # ('glove.twitter.27B.100d.txt', 100),
-    ('glove.twitter.27B.200d.txt', 200),
+    # ('glove.twitter.27B.200d.txt', 200),
     # ('glove.42B.300d.txt', 300),
     ('glove.840B.300d.txt', 300),
 
     # https://github.com/commonsense/conceptnet-numberbatch
-    # ('numberbatch-en.txt', 300),
+    ('numberbatch-en.txt', 300),
 
     # fasttext
     ('crawl-300d-2M.vec', 300),
@@ -44,18 +42,18 @@ EMBEDDINGS = [
     # ('wiki-news-300d-1M.vec', 300),
 
     # https://levyomer.wordpress.com/2014/04/25/dependency-based-word-embeddings/
-    # ('bow2.words', 300),
+    ('bow2.words', 300),
     # ('bow2.contexts', 300),
-    # ('bow5.words', 300),
+    ('bow5.words', 300),
     # ('bow5.contexts', 300),
-    # ('deps.words', 300),
+    ('deps.words', 300),
     # ('deps.contexts', 300),
 
     # http://www.ims.uni-stuttgart.de/forschung/ressourcen/experiment-daten/sota-sentiment.html
-    # ('sota-google.txt', 300),
-    # ('sota-retrofit-600.txt', 600),
+    ('sota-google.txt', 300),
+    ('sota-retrofit-600.txt', 600),
     ('sota-sswe-50.txt', 50),
-    # ('sota-wiki-600.txt', 600),
+    ('sota-wiki-600.txt', 600),
 
     # Cambria CNN aspects based on Amazon reviews
     ('sentic2vec.txt', 300),
@@ -64,19 +62,20 @@ EMBEDDINGS = [
 EMBEDDINGS_PATH = Path('/home/laugustyniak/data/embeddings/')
 DATASETS_PATS = [
     # 'data/aspects/bing_liu/bio_tags',
-    'semeval/2014',
+    # 'semeval/2014',
+    'semeval/2014/poria',
 ]
-TAG_NUM = 2
-TF = [True]
-EPOCHS = 25
+TAG_NUM = 3
+TF = [True, False]
+EPOCHS = 10
 
 
 def run_evaluation_multi_datasets_and_multi_embeddings():
     for augment_data in [False]:
         for char_embedding_flag in [True, False]:
-            for crf_layer in TF:
-                for word_embedding_flag in TF:
-                    for bilstm_layer in TF:
+            for crf_layer in [True]:
+                for word_embedding_flag in [True]:
+                    for bilstm_layer in [True]:
 
                         # we can't process without vectorization
                         if not word_embedding_flag and not char_embedding_flag:

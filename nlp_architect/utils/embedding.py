@@ -24,7 +24,7 @@ import numpy as np
 from tqdm import tqdm
 
 
-@lru_cache(None)
+@lru_cache(maxsize=1)
 def load_word_embeddings(file_path):
     """
     Loads a word embedding model text file into a word(str) to numpy vector dictionary
