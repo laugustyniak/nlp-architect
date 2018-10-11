@@ -75,6 +75,8 @@ class SequentialTaggingDataset(object):
         self.data = {}
         self.data_augmentation = AttrDict
 
+        self.test_raw_sentences = self._read_file(self.files['test'])
+
         train_file_name = Path(train_file).stem.split('-')[0]
         features_file_name = (
                 train_file_name +

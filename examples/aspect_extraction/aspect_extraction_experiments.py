@@ -275,6 +275,7 @@ def run_aspect_sequence_tagging(
             'external_embedding_model': embedding_model,
             'train_file': train_file,
             'test_file': test_file,
+            'test_raw_sentences': dataset.test_raw_sentences,
             'eval': eval,
             # 'data_augmentation': dataset.data_augmentation,
             'augment_data': augment_data,
