@@ -9,7 +9,7 @@ Evaluation = namedtuple('Evaluation', 'y, prediction, labels')
 
 MODELS_PATH = Path('/home/laugustyniak/github/phd/nlp-architect/examples/aspect_extraction/models/glove.840B.300d/')
 
-pred_y_ylables = get_models_attributes(MODELS_PATH.glob('*model-info-char-word-bilstm-crf-10epochs-Laptops_poria-train.conll.info*'), 'predictions', 'y_test', 'y_labels', 'test_raw_sentences')
+pred_y_ylables = get_models_attributes(MODELS_PATH.glob('*model-info-char-word-bilstm-crf-10epochs-*_poria-train.conll.info*'), 'predictions', 'y_test', 'y_labels', 'test_raw_sentences')
 
 for dataset, item in list(pred_y_ylables.items()):
     print(dataset)
@@ -21,6 +21,7 @@ for dataset, item in list(pred_y_ylables.items()):
         })
 
     scores = get_conll_scores(*args)
+    print(scores)
     true_labels_and_predictions = get_y_label_and_prediction_tuples(*args)
 
     errors = []
@@ -28,6 +29,6 @@ for dataset, item in list(pred_y_ylables.items()):
         if not raw_sentences[1] == true_predictions[2]:
             errors.append(Evaluation(raw_sentences[1], true_predictions[2], raw_sentences[0]))
 
-    for error in errors:
-        if error.y != error.prediction:
-            print(list(zip(error.y, error.prediction, error.labels)), '\n')
+    # for error in errors:
+    #     if error.y != error.prediction:
+    #         print(list(zip(error.y, error.prediction, error.labels)), '\n')
