@@ -42,24 +42,25 @@ EMBEDDINGS = [
     # ('wiki-news-300d-1M.vec', 300),
 
     # https://levyomer.wordpress.com/2014/04/25/dependency-based-word-embeddings/
-    ('bow2.words', 300),
+    # ('bow2.words', 300),
     # ('bow2.contexts', 300),
-    ('bow5.words', 300),
+    # ('bow5.words', 300),
     # ('bow5.contexts', 300),
-    ('deps.words', 300),
+    # ('deps.words', 300),
     # ('deps.contexts', 300),
 
     # http://www.ims.uni-stuttgart.de/forschung/ressourcen/experiment-daten/sota-sentiment.html
     ('sota-google.txt', 300),
-    ('sota-retrofit-600.txt', 600),
-    ('sota-sswe-50.txt', 50),
-    ('sota-wiki-600.txt', 600),
+    # ('sota-retrofit-600.txt', 600),
+    # ('sota-sswe-50.txt', 50),
+    # ('sota-wiki-600.txt', 600),
 
     # Cambria CNN aspects based on Amazon reviews
     ('sentic2vec.txt', 300),
 ]
 
 EMBEDDINGS_PATH = Path('/home/laugustyniak/data/embeddings/')
+# EMBEDDINGS_PATH = Path('/datasets/embeddings/')
 DATASETS_PATS = [
     # 'data/aspects/bing_liu/bio_tags',
     # 'semeval/2014',
@@ -72,10 +73,10 @@ EPOCHS = 10
 
 def run_evaluation_multi_datasets_and_multi_embeddings():
     for augment_data in [False]:
-        for char_embedding_flag in [True, False]:
-            for crf_layer in [True]:
+        for char_embedding_flag in TF:
+            for crf_layer in TF:
                 for word_embedding_flag in [True]:
-                    for bilstm_layer in [True]:
+                    for bilstm_layer in TF:
 
                         # we can't process without vectorization
                         if not word_embedding_flag and not char_embedding_flag:
