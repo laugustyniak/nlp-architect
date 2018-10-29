@@ -18,18 +18,19 @@ from nlp_architect.models.aspect_extraction import AspectExtraction
 from nlp_architect.utils.metrics import get_conll_scores
 
 DatasetFiles = namedtuple('Dataset', ['name', 'train_file', 'test_file'])
+LOGS_PATH = Path('/datasets/sentiment/aspects/comparison/')
 
 EMBEDDINGS = [
 
     # https://nlp.stanford.edu/projects/glove/
     ('glove.6B.50d.txt', 50),
-    # ('glove.6B.100d.txt', 100),
-    # ('glove.6B.200d.txt', 200),
-    # ('glove.6B.300d.txt', 300),
+    ('glove.6B.100d.txt', 100),
+    ('glove.6B.200d.txt', 200),
+    ('glove.6B.300d.txt', 300),
     # ('glove.twitter.27B.25d.txt', 25),
     # ('glove.twitter.27B.50d.txt', 50),
     # ('glove.twitter.27B.100d.txt', 100),
-    # ('glove.twitter.27B.200d.txt', 200),
+    ('glove.twitter.27B.200d.txt', 200),
     # ('glove.42B.300d.txt', 300),
     ('glove.840B.300d.txt', 300),
 
@@ -38,8 +39,8 @@ EMBEDDINGS = [
 
     # fasttext
     ('crawl-300d-2M.vec', 300),
-    # ('wiki-news-300d-1M-subword.vec', 300),
-    # ('wiki-news-300d-1M.vec', 300),
+    ('wiki-news-300d-1M-subword.vec', 300),
+    ('wiki-news-300d-1M.vec', 300),
 
     # https://levyomer.wordpress.com/2014/04/25/dependency-based-word-embeddings/
     # ('bow2.words', 300),
@@ -51,16 +52,20 @@ EMBEDDINGS = [
 
     # http://www.ims.uni-stuttgart.de/forschung/ressourcen/experiment-daten/sota-sentiment.html
     ('sota-google.txt', 300),
-    # ('sota-retrofit-600.txt', 600),
-    # ('sota-sswe-50.txt', 50),
-    # ('sota-wiki-600.txt', 600),
+    ('sota-retrofit-600.txt', 600),
+    ('sota-sswe-50.txt', 50),
+    ('sota-wiki-600.txt', 600),
 
     # Cambria CNN aspects based on Amazon reviews
     ('sentic2vec.txt', 300),
+
+    ('lexvec.commoncrawl.ngramsubwords.300d.W.pos.vectors', 300),
+    ('lexvec.enwiki+newscrawl.300d.W.pos.vectors', 300),
 ]
 
-EMBEDDINGS_PATH = Path('/home/laugustyniak/data/embeddings/')
+# EMBEDDINGS_PATH = Path('/home/laugustyniak/data/embeddings/')
 # EMBEDDINGS_PATH = Path('/datasets/embeddings/')
+EMBEDDINGS_PATH = Path('/home/lukasz/data/embeddings/')
 DATASETS_PATS = [
     # 'data/aspects/bing_liu/bio_tags',
     # 'semeval/2014',
@@ -68,7 +73,7 @@ DATASETS_PATS = [
 ]
 TAG_NUM = 3
 TF = [True, False]
-EPOCHS = 10
+EPOCHS = 25
 
 
 def run_evaluation_multi_datasets_and_multi_embeddings():
@@ -165,7 +170,7 @@ def run_aspect_sequence_tagging(
 
     trained_models_path = Path('trained', models_path)
     trained_models_path.mkdir(exist_ok=True, parents=True)
-    logs_path = Path('logs', models_path)
+    logs_path = LOGS_PATH / models_path
     logs_path.mkdir(exist_ok=True, parents=True)
 
     # load dataset and parameters
