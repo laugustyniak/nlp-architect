@@ -143,7 +143,7 @@ class AspectExtraction(object):
                 lstm_layers = Bidirectional(LSTM(tagger_lstm_dims, return_sequences=True))(features)
             else:
                 lstm_layers = LSTM(tagger_lstm_dims, return_sequences=True)(features)
-            # lstm_layers = Dropout(dropout)(lstm_layers)
+            lstm_layers = Dropout(dropout)(lstm_layers)
             predictions = Dense(target_label_dims, activation='softmax')(lstm_layers)
             model = Model(inputs=all_inputs, outputs=predictions)
             model.compile(
