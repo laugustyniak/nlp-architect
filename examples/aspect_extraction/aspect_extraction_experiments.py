@@ -18,47 +18,51 @@ from nlp_architect.models.aspect_extraction import AspectExtraction
 from nlp_architect.utils.metrics import get_conll_scores
 
 DatasetFiles = namedtuple('Dataset', ['name', 'train_file', 'test_file'])
-LOGS_PATH = Path('/datasets/sentiment/aspects/comparison/')
+# LOGS_PATH = Path('/datasets/sentiment/aspects/comparison/')
+LOGS_PATH = Path('/home/lukasz/data/embeddings/')
 
 EMBEDDINGS = [
 
-    # https://nlp.stanford.edu/projects/glove/
-    ('glove.6B.50d.txt', 50),
-    ('glove.6B.100d.txt', 100),
-    ('glove.6B.200d.txt', 200),
-    ('glove.6B.300d.txt', 300),
-    # ('glove.twitter.27B.25d.txt', 25),
-    # ('glove.twitter.27B.50d.txt', 50),
-    # ('glove.twitter.27B.100d.txt', 100),
-    ('glove.twitter.27B.200d.txt', 200),
+    # Google's word2vec news
+    ('GoogleNews-vectors-negative300.txt', 300),
+
+    # # https://nlp.stanford.edu/projects/glove/
+    # ('glove.6B.50d.txt', 50),
+    # ('glove.6B.100d.txt', 100),
+    # ('glove.6B.200d.txt', 200),
+    # ('glove.6B.300d.txt', 300),
+    # # ('glove.twitter.27B.25d.txt', 25),
+    # # ('glove.twitter.27B.50d.txt', 50),
+    # # ('glove.twitter.27B.100d.txt', 100),
+    # ('glove.twitter.27B.200d.txt', 200),
     # ('glove.42B.300d.txt', 300),
     ('glove.840B.300d.txt', 300),
-
-    # https://github.com/commonsense/conceptnet-numberbatch
-    ('numberbatch-en.txt', 300),
-
-    # fasttext
-    ('crawl-300d-2M.vec', 300),
+    #
+    # # https://github.com/commonsense/conceptnet-numberbatch
+    # ('numberbatch-en.txt', 300),
+    #
+    # # fasttext
+    # ('crawl-300d-2M.vec', 300),
     ('wiki-news-300d-1M-subword.vec', 300),
     ('wiki-news-300d-1M.vec', 300),
-
-    # https://levyomer.wordpress.com/2014/04/25/dependency-based-word-embeddings/
-    # ('bow2.words', 300),
-    # ('bow2.contexts', 300),
-    # ('bow5.words', 300),
-    # ('bow5.contexts', 300),
-    # ('deps.words', 300),
-    # ('deps.contexts', 300),
-
-    # http://www.ims.uni-stuttgart.de/forschung/ressourcen/experiment-daten/sota-sentiment.html
-    ('sota-google.txt', 300),
-    ('sota-retrofit-600.txt', 600),
-    ('sota-sswe-50.txt', 50),
-    ('sota-wiki-600.txt', 600),
-
-    # Cambria CNN aspects based on Amazon reviews
-    ('sentic2vec.txt', 300),
-
+    #
+    # # https://levyomer.wordpress.com/2014/04/25/dependency-based-word-embeddings/
+    ('bow2.words', 300),
+    ('bow2.contexts', 300),
+    ('bow5.words', 300),
+    ('bow5.contexts', 300),
+    ('deps.words', 300),
+    ('deps.contexts', 300),
+    #
+    # # http://www.ims.uni-stuttgart.de/forschung/ressourcen/experiment-daten/sota-sentiment.html
+    # ('sota-google.txt', 300),
+    # ('sota-retrofit-600.txt', 600),
+    # ('sota-sswe-50.txt', 50),
+    # ('sota-wiki-600.txt', 600),
+    #
+    # # Cambria CNN aspects based on Amazon reviews
+    # ('sentic2vec.txt', 300),
+    #
     ('lexvec.commoncrawl.ngramsubwords.300d.W.pos.vectors', 300),
     ('lexvec.enwiki+newscrawl.300d.W.pos.vectors', 300),
 ]
@@ -269,7 +273,7 @@ def run_aspect_sequence_tagging(
             'num_of_labels': num_y_labels,
             'labels_id_to_word': {v: k for k, v in dataset.y_labels.items()},
             'epoch': epoch,
-            'word_vocab': dataset.word_vocab,
+            # 'word_vocab': dataset.word_vocab,
             'vocab_size': vocabulary_size,
             'char_vocab_size': char_vocabulary_size,
             'char_vocab': dataset.char_vocab,
@@ -281,18 +285,18 @@ def run_aspect_sequence_tagging(
             'external_embedding_model': embedding_model,
             'train_file': train_file,
             'test_file': test_file,
-            'test_raw_sentences': dataset.test_raw_sentences,
+            # 'test_raw_sentences': dataset.test_raw_sentences,
             'eval': eval,
             # 'data_augmentation': dataset.data_augmentation,
-            'augment_data': augment_data,
+            # 'augment_data': augment_data,
             'similarity_threshold': similarity_threshold,
             'bilstm_layer': bilstm_layer,
             'crf_layer': crf_layer,
             'word_embedding_layer': word_embedding_flag,
             'char_embedding_layer': char_embedding_flag,
-            'predictions': predictions,
-            'y_test': y_test,
-            'y_labels': dataset.y_labels
+            # 'predictions': predictions,
+            # 'y_test': y_test,
+            # 'y_labels': dataset.y_labels
         }
         print('Save model in: ' + models_path)
         pickle.dump(info, fp)
