@@ -18,8 +18,6 @@ from nlp_architect.models.aspect_extraction import AspectExtraction
 from nlp_architect.utils.metrics import get_conll_scores
 
 DatasetFiles = namedtuple('Dataset', ['name', 'train_file', 'test_file'])
-# LOGS_PATH = Path('/datasets/sentiment/aspects/comparison/')
-LOGS_PATH = Path('/home/lukasz/data/embeddings/')
 
 EMBEDDINGS = [
 
@@ -31,60 +29,61 @@ EMBEDDINGS = [
     # ('glove.6B.100d.txt', 100),
     # ('glove.6B.200d.txt', 200),
     # ('glove.6B.300d.txt', 300),
-    # # ('glove.twitter.27B.25d.txt', 25),
-    # # ('glove.twitter.27B.50d.txt', 50),
-    # # ('glove.twitter.27B.100d.txt', 100),
+    # ('glove.twitter.27B.25d.txt', 25),
+    # ('glove.twitter.27B.50d.txt', 50),
+    # ('glove.twitter.27B.100d.txt', 100),
     # ('glove.twitter.27B.200d.txt', 200),
-    # ('glove.42B.300d.txt', 300),
+    ('glove.42B.300d.txt', 300),
     ('glove.840B.300d.txt', 300),
     #
     # # https://github.com/commonsense/conceptnet-numberbatch
-    # ('numberbatch-en.txt', 300),
+    ('numberbatch-en.txt', 300),
     #
     # # fasttext
-    # ('crawl-300d-2M.vec', 300),
-    ('wiki-news-300d-1M-subword.vec', 300),
-    ('wiki-news-300d-1M.vec', 300),
+    ('crawl-300d-2M.vec', 300),
+    # ('wiki-news-300d-1M-subword.vec', 300),
+    # ('wiki-news-300d-1M.vec', 300),
     #
     # # https://levyomer.wordpress.com/2014/04/25/dependency-based-word-embeddings/
-    ('bow2.words', 300),
-    ('bow2.contexts', 300),
-    ('bow5.words', 300),
-    ('bow5.contexts', 300),
-    ('deps.words', 300),
-    ('deps.contexts', 300),
+    # ('bow2.words', 300),
+    # ('bow2.contexts', 300),
+    # ('bow5.words', 300),
+    # ('bow5.contexts', 300),
+    # ('deps.words', 300),
+    # ('deps.contexts', 300),
     #
     # # http://www.ims.uni-stuttgart.de/forschung/ressourcen/experiment-daten/sota-sentiment.html
-    # ('sota-google.txt', 300),
-    # ('sota-retrofit-600.txt', 600),
-    # ('sota-sswe-50.txt', 50),
-    # ('sota-wiki-600.txt', 600),
+    ('sota-google.txt', 300),
+    ('sota-retrofit-600.txt', 600),
+    ('sota-sswe-50.txt', 50),
+    ('sota-wiki-600.txt', 600),
     #
     # # Cambria CNN aspects based on Amazon reviews
-    # ('sentic2vec.txt', 300),
+    ('sentic2vec.txt', 300),
     #
-    ('lexvec.commoncrawl.ngramsubwords.300d.W.pos.vectors', 300),
-    ('lexvec.enwiki+newscrawl.300d.W.pos.vectors', 300),
+    # ('lexvec.commoncrawl.ngramsubwords.300d.W.pos.vectors', 300),
+    # ('lexvec.enwiki+newscrawl.300d.W.pos.vectors', 300),
 ]
 
-# EMBEDDINGS_PATH = Path('/home/laugustyniak/data/embeddings/')
-# EMBEDDINGS_PATH = Path('/datasets/embeddings/')
-EMBEDDINGS_PATH = Path('/home/lukasz/data/embeddings/')
 DATASETS_PATS = [
     # 'data/aspects/bing_liu/bio_tags',
     # 'semeval/2014',
     'semeval/2014/poria',
 ]
-TAG_NUM = 3
 TF = [True, False]
-EPOCHS = 25
 
 
-def run_evaluation_multi_datasets_and_multi_embeddings():
+@click.command()
+@click.option('--embeddings-path', required=True, type=click.Path(exists=True), help='Path to the embeddings')
+@click.option('--logs-path', required=True, type=click.Path(exists=True), help='Path to output models')
+@click.option('--epochs', required=False, default=25, help='Number of epochs to calculate')
+@click.option('--tag-number', required=False, default=3, help='Number of column with tag to classify')
+def run_evaluation_multi_datasets_and_multi_embeddings(
+        embeddings_path: Path, logs_path: Path, epochs: int, tag_number: int):
     for augment_data in [False]:
         for char_embedding_flag in TF:
             for crf_layer in TF:
-                for word_embedding_flag in [True]:
+                for word_embedding_flag in TF:
                     for bilstm_layer in TF:
 
                         # we can't process without vectorization
@@ -93,7 +92,7 @@ def run_evaluation_multi_datasets_and_multi_embeddings():
 
                         for embedding, word_embedding_dims in tqdm(EMBEDDINGS, desc='Embeddings progress'):
                             click.echo('Embedding: ' + embedding)
-                            embedding_model = EMBEDDINGS_PATH / embedding
+                            embedding_model = embeddings_path / embedding
                             embedding_name = Path(embedding).stem
                             models_output = Path('models') / embedding_name
                             models_output.mkdir(parents=True, exist_ok=True)
@@ -108,8 +107,9 @@ def run_evaluation_multi_datasets_and_multi_embeddings():
                                     test_file=dataset_file.test_file.as_posix(),
                                     embedding_model=embedding_model.as_posix(),
                                     models_path=models_output.as_posix(),
-                                    tag_num=TAG_NUM,
-                                    epoch=EPOCHS,
+                                    logs_path=logs_path,
+                                    tag_num=tag_number,
+                                    epoch=epochs,
                                     dropout=0.5,
                                     character_embedding_dims=character_embedding_dims,
                                     char_features_lstm_dims=character_embedding_dims,
@@ -141,6 +141,7 @@ def run_aspect_sequence_tagging(
         train_file,
         test_file,
         models_path: str,
+        logs_path: Path,
         augment_data: bool,
         embedding_model: str,
         word_embedding_dims: int,
@@ -174,7 +175,7 @@ def run_aspect_sequence_tagging(
 
     trained_models_path = Path('trained', models_path)
     trained_models_path.mkdir(exist_ok=True, parents=True)
-    logs_path = LOGS_PATH / models_path
+    logs_path = logs_path / models_path
     logs_path.mkdir(exist_ok=True, parents=True)
 
     # load dataset and parameters
