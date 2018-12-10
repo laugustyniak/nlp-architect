@@ -25,40 +25,40 @@ EMBEDDINGS = [
     ('GoogleNews-vectors-negative300.txt', 300),
 
     # # https://nlp.stanford.edu/projects/glove/
-    # ('glove.6B.50d.txt', 50),
-    # ('glove.6B.100d.txt', 100),
-    # ('glove.6B.200d.txt', 200),
-    # ('glove.6B.300d.txt', 300),
+    ('glove.840B.300d.txt', 300),
+    ('glove.42B.300d.txt', 300),
+    ('glove.6B.300d.txt', 300),
+    ('glove.6B.200d.txt', 200),
+    ('glove.6B.100d.txt', 100),
+    ('glove.6B.50d.txt', 50),
     # ('glove.twitter.27B.25d.txt', 25),
     # ('glove.twitter.27B.50d.txt', 50),
     # ('glove.twitter.27B.100d.txt', 100),
     # ('glove.twitter.27B.200d.txt', 200),
-    ('glove.42B.300d.txt', 300),
-    ('glove.840B.300d.txt', 300),
-    #
-    # # https://github.com/commonsense/conceptnet-numberbatch
+    # #
+    # # # https://github.com/commonsense/conceptnet-numberbatch
     ('numberbatch-en.txt', 300),
-    #
-    # # fasttext
+    # # #
+    # # # # fasttext
     ('crawl-300d-2M.vec', 300),
-    # ('wiki-news-300d-1M-subword.vec', 300),
-    # ('wiki-news-300d-1M.vec', 300),
-    #
-    # # https://levyomer.wordpress.com/2014/04/25/dependency-based-word-embeddings/
-    # ('bow2.words', 300),
-    # ('bow2.contexts', 300),
-    # ('bow5.words', 300),
-    # ('bow5.contexts', 300),
-    # ('deps.words', 300),
-    # ('deps.contexts', 300),
-    #
-    # # http://www.ims.uni-stuttgart.de/forschung/ressourcen/experiment-daten/sota-sentiment.html
-    ('sota-google.txt', 300),
-    ('sota-retrofit-600.txt', 600),
-    ('sota-sswe-50.txt', 50),
-    ('sota-wiki-600.txt', 600),
-    #
-    # # Cambria CNN aspects based on Amazon reviews
+    # # # ('wiki-news-300d-1M-subword.vec', 300),
+    ('wiki-news-300d-1M.vec', 300),
+    # # #
+    # # # # https://levyomer.wordpress.com/2014/04/25/dependency-based-word-embeddings/
+    # # # ('bow2.words', 300),
+    # # # ('bow2.contexts', 300),
+    # # # ('bow5.words', 300),
+    # # # ('bow5.contexts', 300),
+    # # # ('deps.words', 300),
+    # # # ('deps.contexts', 300),
+    # # #
+    # # # # http://www.ims.uni-stuttgart.de/forschung/ressourcen/experiment-daten/sota-sentiment.html
+    # # # ('sota-google.txt', 300),
+    # # # ('sota-retrofit-600.txt', 600),
+    # ('sota-sswe-50.txt', 50),
+    # # # ('sota-wiki-600.txt', 600),
+    # #
+    # # # Cambria CNN aspects based on Amazon reviews
     ('sentic2vec.txt', 300),
     #
     # ('lexvec.commoncrawl.ngramsubwords.300d.W.pos.vectors', 300),
@@ -74,54 +74,58 @@ TF = [True, False]
 
 
 @click.command()
-@click.option('--embeddings-path', required=True, type=click.Path(exists=True), help='Path to the embeddings')
-@click.option('--logs-path', required=True, type=click.Path(exists=True), help='Path to output models')
+@click.option('--embeddings-path', required=True, type=Path, help='Path to the embeddings')
+@click.option('--logs-path', required=True, type=Path, help='Path to output logs and tensorboard objects')
+@click.option('--models-path', required=False, default=None, type=Path, help='Path to output models')
 @click.option('--epochs', required=False, default=25, help='Number of epochs to calculate')
 @click.option('--tag-number', required=False, default=3, help='Number of column with tag to classify')
 def run_evaluation_multi_datasets_and_multi_embeddings(
-        embeddings_path: Path, logs_path: Path, epochs: int, tag_number: int):
-    for augment_data in [False]:
-        for char_embedding_flag in TF:
-            for crf_layer in TF:
-                for word_embedding_flag in TF:
-                    for bilstm_layer in TF:
+        embeddings_path: Path, models_path: Path, logs_path: Path, epochs: int, tag_number: int):
+
+    for embedding, word_embedding_dims in tqdm(EMBEDDINGS, desc='Embeddings progress'):
+        for word_embedding_flag in [True]:
+            for char_embedding_flag in TF:
+                for bilstm_layer in TF:
+                    for crf_layer in TF:
 
                         # we can't process without vectorization
                         if not word_embedding_flag and not char_embedding_flag:
                             continue
 
-                        for embedding, word_embedding_dims in tqdm(EMBEDDINGS, desc='Embeddings progress'):
-                            click.echo('Embedding: ' + embedding)
-                            embedding_model = embeddings_path / embedding
-                            embedding_name = Path(embedding).stem
+                        click.echo('Embedding: ' + embedding)
+                        embedding_model = embeddings_path / embedding
+                        embedding_name = Path(embedding).stem
+                        if models_path is None:
                             models_output = Path('models') / embedding_name
-                            models_output.mkdir(parents=True, exist_ok=True)
+                        else:
+                            models_output = models_path / Path('models') / embedding_name
+                        models_output.mkdir(parents=True, exist_ok=True)
 
-                            word_embedding_dims = word_embedding_dims if word_embedding_flag else 0
-                            character_embedding_dims = 25 if char_embedding_flag else 0
+                        word_embedding_dims = word_embedding_dims if word_embedding_flag else 0
+                        character_embedding_dims = 25 if char_embedding_flag else 0
 
-                            for dataset_file in tqdm(get_aspect_datasets(), desc='Datasets progress'):
-                                click.echo('Dataset: ' + dataset_file.train_file.as_posix())
-                                run_aspect_sequence_tagging(
-                                    train_file=dataset_file.train_file.as_posix(),
-                                    test_file=dataset_file.test_file.as_posix(),
-                                    embedding_model=embedding_model.as_posix(),
-                                    models_path=models_output.as_posix(),
-                                    logs_path=logs_path,
-                                    tag_num=tag_number,
-                                    epoch=epochs,
-                                    dropout=0.5,
-                                    character_embedding_dims=character_embedding_dims,
-                                    char_features_lstm_dims=character_embedding_dims,
-                                    word_embedding_dims=word_embedding_dims,
-                                    entity_tagger_lstm_dims=word_embedding_dims + character_embedding_dims,
-                                    tagger_fc_dims=word_embedding_dims + character_embedding_dims,
-                                    augment_data=augment_data,
-                                    bilstm_layer=bilstm_layer,
-                                    crf_layer=crf_layer,
-                                    word_embedding_flag=word_embedding_flag,
-                                    char_embedding_flag=char_embedding_flag,
-                                )
+                        for dataset_file in tqdm(get_aspect_datasets(), desc='Datasets progress'):
+                            click.echo('Dataset: ' + dataset_file.train_file.as_posix())
+                            run_aspect_sequence_tagging(
+                                train_file=dataset_file.train_file.as_posix(),
+                                test_file=dataset_file.test_file.as_posix(),
+                                embedding_model=embedding_model.as_posix(),
+                                models_path=models_output.as_posix(),
+                                logs_path=logs_path,
+                                tag_num=tag_number,
+                                epoch=epochs,
+                                dropout=0.5,
+                                character_embedding_dims=character_embedding_dims,
+                                char_features_lstm_dims=character_embedding_dims,
+                                word_embedding_dims=word_embedding_dims,
+                                entity_tagger_lstm_dims=word_embedding_dims + character_embedding_dims,
+                                tagger_fc_dims=word_embedding_dims + character_embedding_dims,
+                                augment_data=False,
+                                bilstm_layer=bilstm_layer,
+                                crf_layer=crf_layer,
+                                word_embedding_flag=word_embedding_flag,
+                                char_embedding_flag=char_embedding_flag,
+                            )
 
 
 def get_aspect_datasets() -> Iterable[DatasetFiles]:
@@ -240,15 +244,18 @@ def run_aspect_sequence_tagging(
     )
 
     # Set callback functions to early stop training and save the best model so far
+    tensorboard_path = (logs_path / ('tensorboard-' + model_name)).as_posix()
+    print('Tensorboard: ' + tensorboard_path)
+
     callbacks = [
         ConllCallback(x_test, y_test, dataset.y_labels, batch_size=batch_size),
-        TensorBoard(log_dir=(logs_path / model_name).as_posix()),
+        TensorBoard(log_dir=tensorboard_path),
         EarlyStopping(monitor='val_loss', patience=2),
-        ModelCheckpoint(
-            filepath=(trained_models_path / '{}-best_model.h5'.format(model_name)).as_posix(),
-            monitor='val_loss',
-            save_best_only=True
-        )
+        # ModelCheckpoint(
+        #     filepath=(trained_models_path / '{}-best_model.h5'.format(model_name)).as_posix(),
+        #     monitor='val_loss',
+        #     save_best_only=True
+        # )
     ]
 
     aspect_model.fit(
