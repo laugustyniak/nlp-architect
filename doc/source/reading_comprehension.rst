@@ -24,64 +24,82 @@ Answer Pointer network for Machine Reading Comprehension. The idea behind this
 method is to build a question aware representation of the passage and use this representation as an
 input to the pointer network which identifies the start and end indices of the answer.
 
-**Model Architecture**
+Model Architecture
+------------------
 
-.. image: ../../examples/reading_comprehension/MatchLSTM_Model.png
+.. image:: ../../examples/reading_comprehension/MatchLSTM_Model.png
 
 
 Files
 ======
-- **nlp_architect/contrib/ngraph/match_lstm.py** -Contains different layers in ngraph required for the model
-- **nlp_architect/utils/weight_initializers.py** - Contains functions to initialize the LSTM Cell in ngraph
-- **examples/train.py** -Implements the end to end model along with the training commands
-- **examples/utils.py**- Implements different utility functions to set up the data loader and to do the evaluation.
-- **examples/prepare_data.py**- Implements the pipeline to preprocess the dataset
+- **examples/reading_comprehension/train.py** -Implements the end to end model along with the training commands
+- **examples/reading_comprehension/utils.py**- Implements different utility functions to set up the data loader and for evaluation.
+- **examples/reading_comprehension/prepare_data.py**- Implements the pipeline to preprocess the dataset
+- **nlp_architect/models/matchlstm_ansptr.py**- Defines the end to end MatchLSTM and :py:class:`Answer_Pointer <nlp_architect.models.matchlstm_ansptr.MatchLSTM_AnswerPointe>` network for Reading Comprehension
 
+Dataset
+=======
+This repository uses the SQuAD dataset. The preprocessing steps required prior to training are listed below:
 
-Datasets
-========
-This repository uses the SQuAD dataset. The preprossessing steps required prior to training are listed below:
-
-1. mkdir data
-
-2. Download the training and dev datasets  from here
-https://rajpurkar.github.io/SQuAD-explorer/ and place the extracted json files in the `data` directory.
+1. ``cd examples/reading_comprehension/; mkdir data``
+2. Download the official SQuAD-v1.1 training (train-v1.1.json) and development(dev-v1.1.json) datasets from `here <https://worksheets.codalab.org/worksheets/0x62eefc3e64e04430a1a24785a9293fff/>`_ and place the extracted json files in the ``data`` directory. For more information about SQuAD, please visit https://rajpurkar.github.io/SQuAD-explorer/.
 The terms and conditions of the data set license apply. Intel does not grant any rights to the data files.
+3. Download the GloVe pretrained embeddings from http://nlp.stanford.edu/data/glove.6B.zip and copy ``glove.6B.300d.txt`` file into the ``data`` directory. For more information about GloVe please visit https://nlp.stanford.edu/projects/glove/. The terms and conditions of the data set license apply. Intel does not grant any rights to the data files.
+4. Preprocess the data set using the following command:
 
-3. Download the GloVe pretrained embeddings from  http://nlp.stanford.edu/data/glove.6B.zip and copy "glove.6B.300d.txt" into the  `data` directory.
-For more information about GloVe please visit https://nlp.stanford.edu/projects/glove/. The terms and conditions of the data set license apply. Intel does not grant any rights to the data files.
-
-4. Preprocess the data set using this command
 
 .. code:: python
-python prepare_data.py --data_path data/
 
-Training
-========
-Train the model using the following command
+  python examples/reading_comprehension/prepare_data.py --data_path data/
+
+
+Running Modalities
+==================
+Training & Inference
+--------------------
+Train the model using the following command:
 
 .. code:: python
-python train.py --data_path data/ -bgpu --gpu_id 0
+
+  python examples/reading_comprehension/train.py --data_path data/
+
+
+To visualize predicted answers for paragraphs and questions in the validation dataset (ie run inference with batch_size=1)  use the following command:
+
+.. code:: python
+
+   python train.py --restore_model=True --inference_mode=True --data_path=data/ --model_dir=/path/to/trained_model/ --batch_size=1 --num_examples=50
+
 
 The command line options available are:
 
-* ``--gpu_id`` select the gpu id train the model. Default is 0.
-* ``--max_para_req`` enter the max length of the para to truncate the dataset.Default is 100. Currently the code has been tested for a maximum length of paragraph length of 100.
-* ``--batch_size_squad`` enter the batch size (please note that 30 is the max batch size that will fit on a gpu with 12 gb memory). Default is 16.
-* ``--data_path`` enter the path to the preprocessed dataset
+--data_path         enter the path to the preprocessed dataset
+--max_para_req      enter the max length of the paragraph to truncate the dataset. Default is 300.
+--epochs            enter number of epochs to start training. Default is 15.
+--gpu_id            select the gpu id train the model. Default is 0.
+--train_set_size    enter the size of the training set. Default takes in all examples for training.
+--batch_size        enter the batch size. Default is 64.
+--hidden_size       enter the number of hidden units. Default is 150.
+--model_dir         enter the path to save/load model.
+--select_device     select the device to run training (CPU, GPU etc)
+--restore_model     choose whether to restore training from a previously saved model. Default is False.
+--inference_mode    choose whether to run inference only
+--num_examples      enter the number of examples to run inference. Default is 50.
 
 Results
-========
-After training starts, you will see outputs like this:
+-------
+After training starts, you will see outputs similar to this:
 
 .. code:: python
 
   Loading Embeddings
-  creating training Set
-  Train Set Size is 19260
-  Dev set size is 2000
-  compiling the graph
-  generating transformer
+  creating training and development sets
+  Match LSTM Pass
+  Answer Pointer Pass
+  Setting up Loss
+  Set up optimizer
+  Begin Training
+  Epoch Number:  0
   iteration = 1, train loss = 13.156427383422852
   F1_Score and EM_score are 0.0 0.0
   iteration = 21, train loss = 12.441322326660156
@@ -94,10 +112,16 @@ After training starts, you will see outputs like this:
 Please note that after each epoch you will see the validation F1 and EM scores being printed out.
 These numbers are a result of a much stricter evaluation and lower than the official evaluation numbers.
 
-Considering the default setting, which has training set of 19260 examples and a development set of 2000 examples
+Considering the default setting, which has training set of 85387 examples and a development set of 10130 examples
 after 15 epochs, you should expect to see a F1 and EM scores on the development set similar to this:
 
-.. code:: python
+:F1 Score: ~62%
+:EM Score: ~48%
 
-  F1 Score ~35%
-  EM Score ~25%
+References
+==========
+
+.. [1] SQuAD: 100,000+ Questions for Machine Comprehension of Text. Authors: Pranav Rajpurkar, Jian Zhang, Konstantin Lopyrev, Percy Liang.
+   Subjects: Computation and Language(cs.CL). arXiv:1606.05250 [cs.CL][https://arxiv.org/abs/1606.05250]. License: https://creativecommons.org/licenses/by-sa/4.0/legalcode
+.. [2] Jeffrey Pennington, Richard Socher, and Christopher D. Manning. 2014 https://nlp.stanford.edu/pubs/glove.pdf. License: http://www.opendatacommons.org/licenses/pddl/1.0/
+.. [3] Wang, S., & Jiang, J. (2016). Machine comprehension using match-lstm and answer pointer. arXiv preprint arXiv:1608.07905. [https://arxiv.org/abs/1608.07905]

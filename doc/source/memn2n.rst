@@ -15,11 +15,11 @@
 .. ---------------------------------------------------------------------------
 
 End-to-End Memory Networks for Goal Oriented Dialogue
-#######################################################
+#####################################################
 
 Overview
 ========
-This directory contains an implementation of an End-to-End Memory Network for goal oriented dialogue in ngraph.
+This directory contains an implementation of an End-to-End Memory Network for goal oriented dialogue in TensorFlow.
 
 Goal oriented dialogue is a subset of open-domain dialogue where an automated agent has a specific
 goal for the outcome of the interaction. At a high level, the system needs to understand a user
@@ -45,17 +45,16 @@ Question-Answering and information retrieval tasks.
 
 Files
 =====
-- **nlp_architect/data/babi_dialog.py**: Data loader class to download data if not present and perform preprocessing.
-- **nlp_architect/models/memn2n_dialogue.py**: Implementation of MemN2N_Dialog class for dialogue tasks.
-- **examples/train_model.py**: Training script to load dataset and train memory network.
-- **examples/interactive.py**: Inference script to run interactive session with a trained goal oriented dialog agent.
-- **examples/utils.py**: Utilities to support interactive mode and simulate backend database.
-- **examples/tests.py**: Unit tests for custom lookuptable layer.
+- **nlp_architect/data/babi_dialog.py**: Data loader :py:class:`class <nlp_architect.data.babi_dialog.BABI_Dialog>` to download data if not present and perform preprocessing.
+- **nlp_architect/models/memn2n_dialogue.py**: Implementation of :py:class:`MemN2N_Dialog <nlp_architect.models.memn2n_dialogue.MemN2N_Dialog>` class for dialogue tasks.
+- **examples/memn2n_dialog/train_model.py**: Training script to load dataset and train memory network.
+- **examples/memn2n_dialog/interactive.py**: Inference script to run interactive session with a trained goal oriented dialog agent.
+- **examples/memn2n_dialog/interactive_utils.py**: Utilities to support interactive mode and simulate backend database.
 
 Datasets
 ========
 The dataset used for training and evaluation is under the umbrella of the Facebook bAbI dialog tasks
-(https://research.fb.com/downloads/babi/). The terms and conditions of the data set license apply. Intel does not grant any rights to the data files. The dataset is automatically downloaded if not found,
+(https://research.fb.com/downloads/babi/, License: https://github.com/facebook/bAbI-tasks/blob/master/LICENSE.md). The terms and conditions of the data set license apply. Intel does not grant any rights to the data files. The dataset is automatically downloaded if not found,
 and the preprocessing all happens at the beginning of training.
 
 There are six separate tasks, tasks 1 through 5 are from simulated conversations between a customer
@@ -83,7 +82,7 @@ To train the model without match type on full dialog tasks, the following comman
 
 .. code:: python
 
-  python train_model.py --task 5 --weights_save_path memn2n_weights.npz
+  python examples/memn2n_dialog/train_model.py --task 5 --weights_save_path memn2n_weights.npz
 
 The flag ``--use_match_type`` can also be used to enable match type features (for improved out-of-vocab performance but slower training).
 
@@ -93,7 +92,7 @@ To begin interactive evaluation with a trained model, the following command can 
 
 .. code:: python
 
-  python interactive.py --model_file memn2n_weights.npz
+  python examples/memn2n_dialog/interactive.py --model_file memn2n_weights.npz
 
 Interactive evaluation begins at the end of training and works as an interactive shell.
 Commands available for the shell are as follows:
@@ -126,8 +125,8 @@ The model was trained and evaluated on the 6 bAbI Dialog tasks with the followin
   5, 96.4, 96.1, 95.6, 93.4
   6, 48.1, 41.1, 45.4, 41.0
 
-Citations
-=========
+References
+==========
 - **Paper**: A. Bordes, Y. Boureau, J. Weston. `Learning End-to-End Goal-Oriented Dialog`_ 2016
 - **Reference TF Implementation**: `chatbot-MemN2N-tensorflow`_ (no match-type or interactive mode)
 

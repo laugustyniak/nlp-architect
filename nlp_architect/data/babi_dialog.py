@@ -19,25 +19,25 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 from __future__ import absolute_import
-from ngraph.util.persist import valid_path_append, fetch_file
-from tqdm import tqdm
-import numpy as np
 import pickle
 import itertools
 import tarfile
 import os
 import sys
+import numpy as np
+from tqdm import tqdm
 from nlp_architect.utils.generic import license_prompt
+from nlp_architect.utils.io import download_unlicensed_file, valid_path_append
 
 
-def pad_sentences(sentences, sentence_length=None, dtype=np.int32, pad_val=0.):
+def pad_sentences(sentences, sentence_length=0, pad_val=0.):
     """
     Pad all sentences to have the same length (number of words)
     """
     lengths = [len(sent) for sent in sentences]
 
     nsamples = len(sentences)
-    if sentence_length is None:
+    if sentence_length == 0:
         sentence_length = np.max(lengths)
 
     X = (np.ones((nsamples, sentence_length)) * pad_val).astype(dtype=np.int32)
@@ -47,14 +47,7 @@ def pad_sentences(sentences, sentence_length=None, dtype=np.int32, pad_val=0.):
     return X
 
 
-def pad_stories(
-        stories,
-        sentence_length,
-        max_story_length,
-        vocab_size,
-        dtype=np.int32,
-        pad_val=0.,
-        use_time=True):
+def pad_stories(stories, sentence_length, max_story_length, pad_val=0.):
     """
     Pad all stories to have the same number of sentences (max_story_length).
     """
@@ -64,8 +57,8 @@ def pad_stories(
         np.ones(
             (nsamples,
              max_story_length,
-             sentence_length)) *
-        pad_val).astype(
+             sentence_length))
+        * pad_val).astype(
             dtype=np.int32)
 
     for i, story in enumerate(stories):
@@ -129,6 +122,8 @@ class BABI_Dialog(object):
         self.oov = oov
         self.use_match_type = use_match_type
         self.cache_vectorized = cache_vectorized
+        self.match_type_vocab = None
+        self.match_type_idxs = None
 
         self.tasks = [
             'dialog-babi-task1-API-calls-',
@@ -147,7 +142,7 @@ class BABI_Dialog(object):
         print('Task is %s' % (self.tasks[self.task]))
 
         (self.train_file, self.dev_file, self.test_file, self.cand_file,
-            self.kb_file, self.vocab_file, self.vectorized_file) = self.load_data()
+         self.kb_file, self.vocab_file, self.vectorized_file) = self.load_data()
 
         # Parse files into sets of dialogue and user/bot utterance pairs
         self.train_dialog = self.parse_dialog(
@@ -240,12 +235,14 @@ class BABI_Dialog(object):
             self.candidate_answer_filename = 'dialog-babi-candidates.txt'
             self.kb_filename = 'dialog-babi-kb-all.txt'
             self.cands_mat_filename = 'babi-cands-with-matchtype_{}.npy'
-            self.vocab_filename = 'dialog-babi-vocab-task{}.pkl'.format(self.task + 1)
+            self.vocab_filename = 'dialog-babi-vocab-task{}'.format(self.task + 1) +\
+                                  '_matchtype{}.pkl'.format(self.use_match_type)
         else:
             self.candidate_answer_filename = 'dialog-babi-task6-dstc2-candidates.txt'
             self.kb_filename = 'dialog-babi-task6-dstc2-kb.txt'
             self.cands_mat_filename = 'dstc2-cands-with-matchtype_{}.npy'
-            self.vocab_filename = 'dstc2-vocab-task{}.pkl'.format(self.task + 1)
+            self.vocab_filename = 'dstc2-vocab-task{}_matchtype{}.pkl'.format(self.task + 1,
+                                                                              self.use_match_type)
 
         self.vectorized_filename = 'vectorized_task{}.pkl'.format(self.task + 1)
 
@@ -259,7 +256,7 @@ class BABI_Dialog(object):
                               self.path) is False:
                 sys.exit(0)
 
-            fetch_file(self.url, self.filename, filepath, self.size)
+            download_unlicensed_file(self.url, self.filename, filepath, self.size)
 
         self.babi_dir_name = self.filename.split('.')[0]
 
@@ -286,8 +283,8 @@ class BABI_Dialog(object):
         vectorized_file = os.path.join(self.workdir, self.vectorized_filename)
 
         if (os.path.exists(train_file) is False
-            or os.path.exists(dev_file) is False
-            or os.path.exists(test_file) is False
+                or os.path.exists(dev_file) is False
+                or os.path.exists(test_file) is False
                 or os.path.exists(cand_file) is False):
             with tarfile.open(filepath, 'r:gz') as f:
                 f.extractall(self.workdir)
@@ -398,14 +395,14 @@ class BABI_Dialog(object):
             m.append([self.words_to_vector(sent) for sent in mem])
             ml.append(len(mem))
             mask_zero_len = self.memory_size - ml[-1]
-            m_mask.append([1.0 for _ in range(ml[-1])] +
-                          [0.0 for _ in range(mask_zero_len)])
+            m_mask.append([1.0 for _ in range(ml[-1])]
+                          + [0.0 for _ in range(mask_zero_len)])
 
             u.append(self.words_to_vector(utt))
             a.append(self.one_hot_vector(answer))
 
         m = np.array([pad_sentences(sents, self.max_utt_len) for sents in m])
-        m = pad_stories(m, self.max_utt_len, self.memory_size, self.vocab_size)
+        m = pad_stories(m, self.max_utt_len, self.memory_size)
         m_mask = np.array(m_mask)
 
         u = pad_sentences(u, self.max_utt_len)
@@ -452,16 +449,13 @@ class BABI_Dialog(object):
             # Add match-type words
             self.match_type_vocab = list(set(self.kb_ents_to_type.values()))
             all_words += list(self.match_type_vocab) + \
-                self.kb_ents_to_type.keys()
+                list(self.kb_ents_to_type.keys())
             # Also compute indicies into each candidate vector for the
             # different match types (fixed position)
             self.match_type_idxs = {
                 mt: i + self.max_cand_len_pre_match for i,
                 mt in enumerate(
                     self.match_type_vocab)}
-        else:
-            self.match_type_vocab = None
-            self.match_type_idxs = None
 
         vocab = list(set(all_words))
         return vocab
@@ -565,9 +559,7 @@ class BABI_Dialog(object):
         # and making a correction
         if db_results and line_in == '<SILENCE>':
             for result in db_results:
-                res_utt_w = result.split(' ')
-                # Dont add time words to DB results
-                # res_utt_w += [str(time_feat) + "_TIME", '<USER>']
+                res_utt_w = [str(time_feat)] + result.split(' ') + ['<USER>']
                 context += [res_utt_w]
                 time_feat += 1
 
@@ -586,7 +578,7 @@ class BABI_Dialog(object):
         memory_pad = (
             np.zeros(
                 (self.memory_size, self.max_utt_len))).astype(
-            dtype=np.int32)
+                    dtype=np.int32)
         memory_pad[:len(memory)] = memory
 
         # Pad user utt to sentence size
@@ -617,11 +609,11 @@ class BABI_Dialog(object):
 
                     cands_mat[cand_idxs, match_type_word_idx] = ent_type_word
         else:
-            cands_mat = None
+            cands_mat = np.array(self.cands)
 
         time_feat += 1
 
-        return user_utt_pad, context, memory_pad, m_mask, cands_mat, time_feat
+        return user_utt_pad, context, memory_pad, cands_mat, time_feat
 
     def load_kb(self):
         """
@@ -637,8 +629,7 @@ class BABI_Dialog(object):
                 '\t')[-1]: x.strip().split(' ')[2].split('\t')[-2] + "_MATCH" for x in kb_text}
         else:
             kb_ents_to_type = {
-                x.strip().split(' ')[3]: x.strip().split(' ')[2] +
-                "_MATCH" for x in kb_text}
+                x.strip().split(' ')[3]: x.strip().split(' ')[2] + "_MATCH" for x in kb_text}
 
         return kb_ents_to_type
 

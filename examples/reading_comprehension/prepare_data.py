@@ -16,28 +16,26 @@
 
 from __future__ import print_function
 import numpy as np
-import nltk
 import argparse
 import json
 import os
-from tqdm import *
-from nlp_architect.utils.io import sanitize_path
-from nlp_architect.utils.io import validate, validate_existing_directory, \
-    validate_existing_filepath, validate_parent_exists, check_size
-
+from tqdm import tqdm
+from nlp_architect.utils.io import validate_existing_directory
+from nlp_architect.utils.text import SpacyInstance
 
 PAD = "<pad>"
 SOS = "<sos>"
 UNK = "<unk>"
 START_VOCAB = [PAD, SOS, UNK]
+tokenizer = SpacyInstance(disable=['tagger', 'ner', 'parser', 'vectors', 'textcat'])
 
 
-def create_vocabulary(data_lists, vocabulary_path=None):
+def create_vocabulary(data_list):
     """
     Function to generate vocabulary for both training and development datasets
     """
     vocab = {}
-    for list_element in data_lists:
+    for list_element in data_list:
         for sentence in list_element:
             for word in sentence:
                 if word in vocab:
@@ -45,10 +43,10 @@ def create_vocabulary(data_lists, vocabulary_path=None):
                 else:
                     vocab[word] = 1
 
-    vocab_list = START_VOCAB + sorted(vocab, key=vocab.get, reverse=True)
-    vocab_dict = dict((vocab_ele, i) for i, vocab_ele in enumerate(vocab_list))
+    _vocab_list = START_VOCAB + sorted(vocab, key=vocab.get, reverse=True)
+    _vocab_dict = dict((vocab_ele, i) for i, vocab_ele in enumerate(_vocab_list))
 
-    return vocab_list, vocab_dict
+    return _vocab_list, _vocab_dict
 
 
 def create_token_map(para, para_tokens):
@@ -70,13 +68,13 @@ def create_token_map(para, para_tokens):
     return token_map
 
 
-def get_glove_matrix(vocab_list, download_path):
+def get_glove_matrix(vocabulary_list, download_path):
     """
     Function to obtain preprocessed glove embeddings matrix
     """
     save_file_name = download_path + "glove.trimmed.300"
     if not os.path.exists(save_file_name + ".npz"):
-        vocab_len = len(vocab_list)
+        vocab_len = len(vocabulary_list)
         glove_path = os.path.join(download_path + "glove.6B.300d.txt")
         glove_matrix = np.zeros((vocab_len, 300))
         count = 0
@@ -85,18 +83,18 @@ def get_glove_matrix(vocab_list, download_path):
                 split_line = line.lstrip().rstrip().split(" ")
                 word = split_line[0]
                 word_vec = list(map(float, split_line[1:]))
-                if word in vocab_list:
-                    word_index = vocab_list.index(word)
+                if word in vocabulary_list:
+                    word_index = vocabulary_list.index(word)
                     glove_matrix[word_index, :] = word_vec
                     count += 1
 
-                if word.upper() in vocab_list:
-                    word_index = vocab_list.index(word.upper())
+                if word.upper() in vocabulary_list:
+                    word_index = vocabulary_list.index(word.upper())
                     glove_matrix[word_index, :] = word_vec
                     count += 1
 
-                if word.capitalize() in vocab_list:
-                    word_index = vocab_list.index(word.capitalize())
+                if word.capitalize() in vocabulary_list:
+                    word_index = vocabulary_list.index(word.capitalize())
                     glove_matrix[word_index, :] = word_vec
                     count += 1
 
@@ -105,12 +103,13 @@ def get_glove_matrix(vocab_list, download_path):
         print("Percentage of words in vocab found in glove embeddings %f" % (count / vocab_len))
 
 
+# pylint: disable=unnecessary-lambda
 def tokenize_sentence(line):
     """
     Function to tokenize  sentence
     """
     tokenized_words = [word.replace("``", '"').replace("''", '"')
-                       for word in nltk.word_tokenize(line)]
+                       for word in tokenizer.tokenize(line)]
     return list(map(lambda x: str(x), tokenized_words))
 
 
@@ -125,6 +124,7 @@ def extract_data_from_files(json_data):
     for article_id in range(len(json_data['data'])):
         sub_paragraphs = json_data['data'][article_id]['paragraphs']
         for para_id in range(len(sub_paragraphs)):
+
             req_para = sub_paragraphs[para_id]['context']
             req_para = req_para.replace("''", '" ').replace("``", '" ')
             para_tokens = tokenize_sentence(req_para)
@@ -153,7 +153,7 @@ def extract_data_from_files(json_data):
                         data_ques.append(question_tokens)
                         data_answer.append((a_start_idx, a_end_idx))
 
-                    except:
+                    except KeyError:
                         line_skipped += 1
 
     return data_para, data_ques, data_answer
@@ -164,28 +164,28 @@ def write_to_file(file_dict, path_to_save):
     Function to write data to files
     """
 
-    for file_name in file_dict:
-        if file_name == "vocab.dat":
-            with open(os.path.join(path_to_save + file_name), 'w') as target_file:
-                for word in file_dict[file_name]:
+    for f_name in file_dict:
+        if f_name == "vocab.dat":
+            with open(os.path.join(path_to_save + f_name), 'w') as target_file:
+                for word in file_dict[f_name]:
                     target_file.write(str(word) + "\n")
         else:
-            with open(os.path.join(path_to_save + file_name), 'w') as target_file:
-                for line in file_dict[file_name]:
+            with open(os.path.join(path_to_save + f_name), 'w') as target_file:
+                for line in file_dict[f_name]:
                     target_file.write(" ".join([str(tok) for tok in line]) + "\n")
 
 
-def get_ids_list(data_lists, vocab):
+def get_ids_list(data_list, vocab):
     """
     Function to obtain indices from vocabulary
     """
     ids_list = []
-    for line in data_lists:
+    for line in data_list:
         curr_line_idx = []
         for word in line:
             try:
                 curr_line_idx.append(vocab[word])
-            except:
+            except ValueError:
                 curr_line_idx.append(vocab[UNK])
 
         ids_list.append(curr_line_idx)
@@ -197,23 +197,34 @@ if __name__ == '__main__':
     # parse the command line arguments
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--data_path',help='enter path where training data and the \
+    parser.add_argument('--data_path', help='enter path where training data and the \
                         glove embeddings were downloaded',
-                        type=str)
+                        type=validate_existing_directory)
 
-    parser.add_argument('--no_preprocess_glove',action="store_true",
-        help='Chose whether or not to preprocess glove embeddings')
+    parser.add_argument('--no_preprocess_glove', action="store_true",
+                        help='Chose whether or not to preprocess glove embeddings')
 
     parser.set_defaults()
     args = parser.parse_args()
+
     glove_flag = not args.no_preprocess_glove
 
-    validate_existing_directory(args.data_path)
-    data_path = sanitize_path(args.data_path)
-    data_path = os.path.join(data_path + "/")
+    # Validate files in the folder:
+    missing_flag = 0
+    files_list = ["train-v1.1.json", "dev-v1.1.json"]
+    for file_name in files_list:
+        if not os.path.exists(os.path.join(args.data_path, file_name)):
+            print("The following required file is missing :", file_name)
+            missing_flag = 1
+
+    if missing_flag:
+        print("Please ensure that required datasets are downloaded")
+        exit()
+
+    data_path = args.data_path
     # Load Train and Dev Data
-    train_filename = os.path.join(data_path + "train-v1.1.json")
-    dev_filename = os.path.join(data_path + "dev-v1.1.json")
+    train_filename = os.path.join(data_path, "train-v1.1.json")
+    dev_filename = os.path.join(data_path, "dev-v1.1.json")
     with open(train_filename) as train_file:
         train_data = json.load(train_file)
 

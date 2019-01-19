@@ -14,151 +14,237 @@
 # limitations under the License.
 # ******************************************************************************
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from __future__ import absolute_import
-from neon.initializers import GlorotUniform
-from neon.layers import MergeMultistream
+from __future__ import absolute_import, division, print_function, unicode_literals
 
-from neon.layers.layer import LookupTable, Reshape, Dropout, Affine
-from neon.layers.recurrent import DeepBiLSTM
-from neon.models import Model
-from neon.transforms import Logistic, Tanh, Softmax
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras.layers import Bidirectional, Conv1D, CuDNNLSTM, Dense, Dropout, Embedding, \
+    GlobalMaxPooling1D, Input, LSTM, TimeDistributed, concatenate
 
-from nlp_architect.contrib.neon.layers import DataInput, TimeDistributedRecurrentLast, \
-    TimeDistBiLSTM
+from nlp_architect.contrib.tensorflow.python.keras.layers.crf import CRF
+from nlp_architect.contrib.tensorflow.python.keras.utils.layer_utils import load_model, save_model
 
 
-class SequenceChunker(object):
+class SequenceTagger(object):
     """
-    Sequence chunker model (Neon based)
+    A sequence tagging model for POS and Chunks written in Tensorflow (and Keras) based on the
+    paper 'Deep multi-task learning with low level tasks supervised at lower layers'.
+    The model has 3 Bi-LSTM layers and outputs POS and Chunk tags.
 
     Args:
-        sentence_length (str): max sentence length
-        token_vocab_size (int): word vocabulary size
-        pos_vocab_size (int, optional): POS vocabulary size
-        char_vocab_size (int, optional): characters vocabulary size
-        max_char_word_length (int, optional): max word length in characters
-        token_embedding_size (int, optional): word embedding dims
-        pos_embedding_size (int, optional): POS embedding dims
-        char_embedding_size (int, optional): character embedding dims
-        num_labels (int, optional): number of output labels possible per token
-        lstm_hidden_size (int, optional): LSTM hidden size
-        num_lstm_layers (int, optional): number of LSTM layers
-        use_external_embedding (bool, optional): input is provided as external word embedding
-        dropout (float, optional): dropout rate
+        use_cudnn (bool, optional): use GPU based model (CUDNNA cells)
     """
 
-    def __init__(self, sentence_length,
-                 token_vocab_size,
-                 pos_vocab_size=None,
-                 char_vocab_size=None,
-                 max_char_word_length=20,
-                 token_embedding_size=None,
-                 pos_embedding_size=None,
-                 char_embedding_size=None,
-                 num_labels=None,
-                 lstm_hidden_size=100,
-                 num_lstm_layers=1,
-                 use_external_embedding=None,
-                 dropout=0.5
-                 ):
+    def __init__(self, use_cudnn=False):
+        self.vocabulary_size = None
+        self.num_pos_labels = None
+        self.num_chunk_labels = None
+        self.char_vocab_size = None
+        self.feature_size = None
+        self.dropout = None
+        self.max_word_len = None
+        self.classifier = None
+        self.optimizer = None
+        self.model = None
+        self.use_cudnn = use_cudnn
 
-        init = GlorotUniform()
-        tokens = []
-        if use_external_embedding is None:
-            tokens.append(LookupTable(vocab_size=token_vocab_size,
-                                      embedding_dim=token_embedding_size,
-                                      init=init,
-                                      pad_idx=0))
-        else:
-            tokens.append(DataInput())
-        tokens.append(Reshape((-1, sentence_length)))
-        f_layers = [tokens]
-
-        # add POS tag input
-        if pos_vocab_size is not None and pos_embedding_size is not None:
-            f_layers.append([
-                LookupTable(vocab_size=pos_vocab_size,
-                            embedding_dim=pos_embedding_size,
-                            init=init,
-                            pad_idx=0),
-                Reshape((-1, sentence_length))
-            ])
-
-        # add Character RNN input
-        if char_vocab_size is not None and char_embedding_size is not None:
-            char_lut_layer = LookupTable(vocab_size=char_vocab_size,
-                                         embedding_dim=char_embedding_size,
-                                         init=init,
-                                         pad_idx=0)
-            char_nn = [char_lut_layer,
-                       TimeDistBiLSTM(char_embedding_size, init, activation=Logistic(),
-                                      gate_activation=Tanh(),
-                                      reset_cells=True, reset_freq=max_char_word_length),
-                       TimeDistributedRecurrentLast(timesteps=max_char_word_length),
-                       Reshape((-1, sentence_length))]
-
-            f_layers.append(char_nn)
-
-        layers = []
-        if len(f_layers) == 1:
-            layers.append(f_layers[0][0])
-        else:
-            layers.append(MergeMultistream(layers=f_layers, merge="stack"))
-            layers.append(Reshape((-1, sentence_length)))
-        layers += [DeepBiLSTM(lstm_hidden_size, init, activation=Logistic(),
-                              gate_activation=Tanh(),
-                              reset_cells=True,
-                              depth=num_lstm_layers),
-                   Dropout(keep=dropout),
-                   Affine(num_labels, init, bias=init, activation=Softmax())]
-        self._model = Model(layers=layers)
-
-    def fit(self, dataset, optimizer, cost, callbacks, epochs=10):
+    def build(self,
+              vocabulary_size,
+              num_pos_labels,
+              num_chunk_labels,
+              char_vocab_size=None,
+              max_word_len=25,
+              feature_size=100,
+              dropout=0.5,
+              classifier='softmax',
+              optimizer=None):
         """
-        fit a model
+        Build a chunker/POS model
 
         Args:
-            dataset: train/test set of CONLL2000 dataset
-            optimizer: optimizer (Neon based)
-            cost: cost function (Neon based)
-            callbacks: callbacks (Neon based)
-            epochs (int, optional): number of epochs to train
+            vocabulary_size (int): the size of the input vocabulary
+            num_pos_labels (int): the size of of POS labels
+            num_chunk_labels (int): the sie of chunk labels
+            char_vocab_size (int, optional): character vocabulary size
+            max_word_len (int, optional): max characters in a word
+            feature_size (int, optional): feature size - determines the embedding/LSTM layer \
+                hidden state size
+            dropout (float, optional): dropout rate
+            classifier (str, optional): classifier layer, 'softmax' for softmax or 'crf' for \
+                conditional random fields classifier. default is 'softmax'.
+            optimizer (tensorflow.python.training.optimizer.Optimizer, optional): optimizer, if \
+                None will use default SGD (paper setup)
         """
-        self._model.fit(dataset,
-                        optimizer=optimizer,
-                        num_epochs=epochs,
-                        cost=cost,
-                        callbacks=callbacks)
+        self.vocabulary_size = vocabulary_size
+        self.char_vocab_size = char_vocab_size
+        self.num_pos_labels = num_pos_labels
+        self.num_chunk_labels = num_chunk_labels
+        self.max_word_len = max_word_len
+        self.feature_size = feature_size
+        self.dropout = dropout
+        self.classifier = classifier
 
-    def predict(self, dataset):
+        word_emb_layer = Embedding(self.vocabulary_size, self.feature_size,
+                                   name='embedding', mask_zero=False)
+        word_input = Input(shape=(None,))
+        word_embedding = word_emb_layer(word_input)
+        input_src = word_input
+        features = word_embedding
+
+        # add char input if present
+        if self.char_vocab_size is not None:
+            char_input = Input(shape=(None, self.max_word_len))
+            char_emb_layer = Embedding(self.char_vocab_size, 30, name='char_embedding',
+                                       mask_zero=False)
+            char_embedding = char_emb_layer(char_input)
+            char_embedding = TimeDistributed(Conv1D(30, 3, padding='same'))(char_embedding)
+            char_embedding = TimeDistributed(GlobalMaxPooling1D())(char_embedding)
+
+            input_src = [input_src, char_input]
+            features = concatenate([word_embedding, char_embedding])
+
+        rnn_layer_1 = Bidirectional(self._rnn_cell(return_sequences=True))(features)
+        rnn_layer_2 = Bidirectional(self._rnn_cell(return_sequences=True))(rnn_layer_1)
+        rnn_layer_3 = Bidirectional(self._rnn_cell(return_sequences=True))(rnn_layer_2)
+
+        # outputs
+        pos_out = Dense(self.num_pos_labels, activation='softmax', name='pos_output')(rnn_layer_1)
+        losses = {'pos_output': 'categorical_crossentropy'}
+        metrics = {'pos_output': 'categorical_accuracy'}
+
+        if 'crf' in self.classifier:
+            with tf.device('/cpu:0'):
+                chunk_crf = CRF(self.num_chunk_labels, name='chunk_crf')
+                rnn_layer_3_dense = Dense(self.num_chunk_labels)(
+                    Dropout(self.dropout)(rnn_layer_3))
+                chunks_out = chunk_crf(rnn_layer_3_dense)
+                losses['chunk_crf'] = chunk_crf.loss
+                metrics['chunk_crf'] = chunk_crf.viterbi_accuracy
+        else:
+            chunks_out = TimeDistributed(Dense(self.num_chunk_labels,
+                                               activation='softmax'),
+                                         name='chunk_out')(rnn_layer_3)
+            losses['chunk_out'] = 'categorical_crossentropy'
+            metrics['chunk_out'] = 'categorical_accuracy'
+
+        model = keras.Model(input_src, [pos_out, chunks_out])
+        if optimizer is None:
+            self.optimizer = tf.train.AdamOptimizer()
+        else:
+            self.optimizer = optimizer
+        model.compile(optimizer=self.optimizer,
+                      loss=losses,
+                      metrics=metrics)
+        self.model = model
+
+    def load_embedding_weights(self, weights):
         """
-        predict output of given dataset
+        Load word embedding weights into the model embedding layer
 
         Args:
-            dataset: Neon based iterator
+            weights (numpy.ndarray): 2D matrix of word weights
+        """
+        assert self.model is not None, 'Cannot assign weights, apply build() before trying to ' \
+                                       'loading embedding weights '
+        emb_layer = self.model.get_layer(name='embedding')
+        assert emb_layer.output_dim == weights.shape[1], 'embedding vectors shape mismatch'
+        emb_layer.set_weights([weights])
+
+    def _rnn_cell(self, **kwargs):
+        if self.use_cudnn:
+            rnn_cell = CuDNNLSTM(self.feature_size, **kwargs)
+        else:
+            rnn_cell = LSTM(self.feature_size, **kwargs)
+        return rnn_cell
+
+    def fit(self, x, y, batch_size=1, epochs=1, validation_data=None, callbacks=None):
+        """
+        Fit provided X and Y on built model
+
+        Args:
+            x: x samples
+            y: y samples
+            batch_size (int, optional): batch size per sample
+            epochs (int, optional): number of epochs to run before ending training process
+            validation_data (optional): x and y samples to validate at the end of the epoch
+            callbacks (optional): additional callbacks to run with fitting
+        """
+        self.model.fit(x=x, y=y, batch_size=batch_size, epochs=epochs,
+                       validation_data=validation_data, callbacks=callbacks)
+
+    def predict(self, x, batch_size=1):
+        """
+        Predict labels given x.
+
+        Args:
+            x: samples for inference
+            batch_size (int, optional): forward pass batch size
 
         Returns:
-            prediction on given dataset
+            tuple of numpy arrays of pos and chunk labels
         """
-        return self._model.get_outputs(dataset)
+        return self.model.predict(x=x, batch_size=batch_size)
 
-    def save(self, path):
+    def save(self, filepath):
         """
-        Save model weights to path
+        Save the model to disk
 
         Args:
-            path (str): path to weights file
+            filepath (str): file name to save model
         """
-        self._model.save_params(path)
+        topology = {k: v for k, v in self.__dict__.items()}
+        topology.pop('model')
+        topology.pop('optimizer')
+        topology.pop('use_cudnn')
+        save_model(self.model, topology, filepath)
 
-    def get_model(self):
+    def load(self, filepath):
         """
-        Get model
+        Load model from disk
+
+        Args:
+            filepath (str): file name of model
+        """
+        load_model(filepath, self)
+
+
+class SequenceChunker(SequenceTagger):
+    """
+    A sequence Chunker model written in Tensorflow (and Keras) based SequenceTagger model.
+    The model uses only the chunking output of the model.
+    """
+
+    def predict(self, x, batch_size=1):
+        """
+        Predict labels given x.
+
+        Args:
+            x: samples for inference
+            batch_size (int, optional): forward pass batch size
 
         Returns:
-            Neon model object
+            tuple of numpy arrays of chunk labels
         """
-        return self._model
+        model = keras.Model(self.model.input, self.model.output[-1])
+        return model.predict(x=x, batch_size=batch_size)
+
+
+class SequencePOSTagger(SequenceTagger):
+    """
+        A sequence POS tagger model written in Tensorflow (and Keras) based SequenceTagger model.
+        The model uses only the chunking output of the model.
+        """
+
+    def predict(self, x, batch_size=1):
+        """
+        Predict labels given x.
+
+        Args:
+            x: samples for inference
+            batch_size (int, optional): forward pass batch size
+
+        Returns:
+            tuple of numpy arrays of POS labels
+        """
+        model = keras.Model(self.model.input, self.model.output[0])
+        return model.predict(x=x, batch_size=batch_size)

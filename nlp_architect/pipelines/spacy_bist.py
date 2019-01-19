@@ -13,12 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ******************************************************************************
-from os import path, remove
+from os import path, remove, makedirs
 
+from nlp_architect.common.core_nlp_doc import CoreNLPDoc
 from nlp_architect.data.conll import ConllEntry
 from nlp_architect.models.bist_parser import BISTModel
-from nlp_architect.common.core_nlp_doc import CoreNLPDoc
-from nlp_architect.utils.io import download_unlicensed_file, unzip_file
+from nlp_architect.utils import LIBRARY_STORAGE_PATH
+from nlp_architect.utils.io import download_unlicensed_file, uncompress_file
 from nlp_architect.utils.io import validate
 from nlp_architect.utils.text import SpacyInstance
 
@@ -32,8 +33,8 @@ class SpacyBISTParser(object):
         (see https://spacy.io/api/top-level#spacy.load).
         bist_model (str, optional): Path to a .model file to load. Defaults pre-trained model'.
     """
-    dir = path.dirname(path.realpath(__file__))
-    pretrained = path.join(dir, 'bist-pretrained', 'bist.model')
+    dir = path.join(LIBRARY_STORAGE_PATH, 'bist-pretrained')
+    _pretrained = path.join(dir, 'bist.model')
 
     def __init__(self, verbose=False, spacy_model='en', bist_model=None):
         validate((verbose, bool), (spacy_model, str, 0, 1000),
@@ -41,11 +42,11 @@ class SpacyBISTParser(object):
         if not bist_model:
             print("Using pre-trained BIST model.")
             _download_pretrained_model()
-            bist_model = SpacyBISTParser.pretrained
+            bist_model = SpacyBISTParser._pretrained
 
         self.verbose = verbose
         self.bist_parser = BISTModel()
-        self.bist_parser.load(bist_model if bist_model else SpacyBISTParser.pretrained)
+        self.bist_parser.load(bist_model if bist_model else SpacyBISTParser._pretrained)
         self.spacy_parser = SpacyInstance(spacy_model,
                                           disable=['ner', 'vectors', 'textcat']).parser
 
@@ -137,14 +138,15 @@ class SpacyBISTParser(object):
 
 def _download_pretrained_model():
     """Downloads the pre-trained BIST model if non-existent."""
-    if not path.isfile(path.join(SpacyBISTParser.dir, 'bist-pretrained', 'bist.model')):
+    if not path.isfile(path.join(SpacyBISTParser.dir, 'bist.model')):
         print('Downloading pre-trained BIST model...')
+        zip_path = path.join(SpacyBISTParser.dir, 'bist-pretrained.zip')
+        makedirs(SpacyBISTParser.dir, exist_ok=True)
         download_unlicensed_file('https://s3-us-west-1.amazonaws.com/nervana-modelzoo/parse/',
-                      'bist-pretrained.zip', path.join(SpacyBISTParser.dir, 'bist-pretrained.zip'))
+                                 'bist-pretrained.zip', zip_path)
         print('Unzipping...')
-        zip_file = path.join(SpacyBISTParser.dir, 'bist-pretrained.zip')
-        unzip_file(zip_file, outpath=SpacyBISTParser.dir)
-        remove(zip_file)
+        uncompress_file(zip_path, outpath=SpacyBISTParser.dir)
+        remove(zip_path)
         print('Done.')
 
 
@@ -159,9 +161,9 @@ def _spacy_pos_to_ptb(pos, text):
     Returns:
         ptb_tag (str): Standard PTB POS tag.
     """
-    validate((pos, str, 0, 30), (text, str, 0, 100))
+    validate((pos, str, 0, 30), (text, str, 0, 1000))
     ptb_tag = pos
-    if text == '...':
+    if text in ['...', '—']:
         ptb_tag = ':'
     elif text == '*':
         ptb_tag = 'SYM'

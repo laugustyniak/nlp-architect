@@ -36,7 +36,7 @@ reStructuredText for documentation).
   the Napoleon_ Sphinx extensions.
 
 .. _PEP8: https://www.python.org/dev/peps/pep-0008/
-.. _Google Style Docstrings: http://google-styleguide.googlecode.com/svn/trunk/pyguide.html#Comments
+.. _Google Style Docstrings: https://github.com/google/styleguide/blob/gh-pages/pyguide.md
 .. _Napoleon: http://sphinxcontrib-napoleon.readthedocs.org/en/latest/index.html
 
 Documentation Conventions
@@ -51,6 +51,8 @@ Documentation Conventions
 * If you created a new class, add it to the API by creating a new section in api.rst and create an autosummary_. Anytime you add an autosummary, please remember to add :nosignatures: to keep things consistent with the rest of our docs.
 
 * Every time you make a significant contribution, add a short description of it in the relevant document.
+
+.. include:: writing_tests.rst
 
 .. _reStructuredText: http://docutils.sourceforge.net/docs/ref/rst/restructuredtext.html
 .. _autosummary: http://sphinx-doc.org/latest/ext/autosummary.html

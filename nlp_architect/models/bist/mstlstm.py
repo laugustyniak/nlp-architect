@@ -41,7 +41,6 @@ from nlp_architect.models.bist.utils import read_conll
 # - Added dict_to_obj()
 # - Added option for train() to get ConllEntry input
 # - Added legal header
-# - Removed save() and load()
 # - Disabled some style checks
 
 
@@ -161,9 +160,9 @@ class MSTParserLSTM(object):
 
         if self.hidden2_units > 0:
             output = self.rout_layer.expr() * self.activation(
-                self.rhid2_bias.expr() + self.rhid2_layer.expr() *
-                self.activation(sentence[i].rheadfov + sentence[j].rmodfov
-                                + self.rhid_bias.expr())) + self.rout_bias.expr()
+                self.rhid2_bias.expr() + self.rhid2_layer.expr()
+                * self.activation(sentence[i].rheadfov + sentence[j].rmodfov
+                                  + self.rhid_bias.expr())) + self.rout_bias.expr()
         else:
             output = self.rout_layer.expr() * self.activation(
                 sentence[i].rheadfov + sentence[j].rmodfov
@@ -353,6 +352,12 @@ class MSTParserLSTM(object):
 
         self.trainer.update()
         print("Loss: ", mloss / i_sentence)
+
+    def save(self, filename):
+        self.model.save(filename)
+
+    def load(self, filename):
+        self.model.populate(filename)
 
 
 def _dict_to_obj(dic, name='Object'):

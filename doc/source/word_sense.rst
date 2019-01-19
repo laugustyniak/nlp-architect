@@ -15,7 +15,7 @@
 .. ---------------------------------------------------------------------------
 
 Most Common Word Sense
-########################
+######################
 
 Overview
 ========
@@ -55,8 +55,10 @@ The feature vector consists of:
 - the word embedding of the target_word
 - the CBOW word embedding of the definition
 
+The model above is implemented in the :py:class:`MostCommonWordSense <nlp_architect.models.most_common_word_sense.MostCommonWordSense>` class.
+
 Dataset
-============
+=======
 The training module requires a gold standard csv file which is list of target_words where each word
 is associated with a CLASS_LABEL - a correct (true example) or an incorrect (false example) sense.
 The sense consists of the definition and the inherited hypernyms of the target word in a specific sense.
@@ -68,8 +70,8 @@ The file should include the following 4 columns:
 where:
 
 1. TARGET_WORD: the word that you want to get the most common sense of.
-2. DEFINITION: the definition of the word (usually a single sentence) extracted from external resource such as wordnet or wikidata
-3. SEMANTIC_BRANCH:  the inherited hypernyms extracted from external resource such as wordnet or wikidata
+2. DEFINITION: the definition of the word (usually a single sentence) extracted from external resource such as Wordnet or Wikidata
+3. SEMANTIC_BRANCH:  the inherited hypernyms extracted from external resource such as Wordnet or Wikidata
 4. CLASS_LABEL: a binary [0,1] Y value that represent whether the sense (Definition and semantic branch) is the most common sense  of the target word
 
 Store the file in the data folder of the project.
@@ -82,12 +84,12 @@ Dataset Preparation
 --------------------
 
 The script prepare_data.py uses the gold standard csv file as described in the requirements section above
-using pretrained Google News Word2vec model. Pretrained Google News Word2vec model can be download here_.
+using pre-trained Google News Word2vec model [1]_ [2]_ [3]_. Pre-trained Google News Word2vec model can be download here_.
 The terms and conditions of the data set license apply. Intel does not grant any rights to the data files.
 
 .. code:: python
 
-  python prepare_data.py --gold_standard_file data/gold_standard.csv
+  python examples/most_common_word_sense/prepare_data.py --gold_standard_file data/gold_standard.csv
        --word_embedding_model_file pretrained_models/GoogleNews-vectors-negative300.bin
        --training_to_validation_size_ratio 0.8
        --data_set_file data/data_set.pkl
@@ -95,21 +97,21 @@ The terms and conditions of the data set license apply. Intel does not grant any
 Training
 --------
 
-Trains the MLP classifier and evaluate it.
+Trains the MLP classifier (:py:class:`model  <nlp_architect.models.most_common_word_sense.MostCommonWordSense>`) and evaluate it.
 
 .. code:: python
 
-  python train.py --data_set_file data/data_set.pkl
-                 --model_prm data/wsd_classification_model.prm
+  python examples/most_common_word_sense/train.py --data_set_file data/data_set.pkl
+                 --model data/wsd_classification_model.h5
 
 Inference
 ---------
 .. code:: python
 
-  python inference.py --max_num_of_senses_to_search 3
+  python examples/most_common_word_sense/inference.py --max_num_of_senses_to_search 3
        --input_inference_examples_file data/input_inference_examples.csv
        --word_embedding_model_file pretrained_models/GoogleNews-vectors-negative300.bin
-       --model_prm data/wsd_classification_model.prm
+       --model data/wsd_classification_model.h5
 
 Where the ``max_num_of_senses_to_search`` is the maximum number of senses that are checked per target word (default =3)
 and ``input_inference_examples_file`` is a csv file containing the input inference data. This file includes
@@ -119,3 +121,8 @@ a single column wherein each entry in this column is a different target word
   The results are printed to the terminal using different colors therefore using a white terminal background is best to view the results
 
 .. _here: https://drive.google.com/file/d/0B7XkCwpI5KDYNlNUTTlSS21pQmM/edit?usp=sharing
+.. [1] Tomas Mikolov, Kai Chen, Greg Corrado, and Jeffrey Dean. Efficient Estimation of Word Representations in Vector Space. In Proceedings of Workshop at ICLR, 2013.
+
+.. [2] Tomas Mikolov, Ilya Sutskever, Kai Chen, Greg Corrado, and Jeffrey Dean. Distributed Representations of Words and Phrases and their Compositionality. In Proceedings of NIPS, 2013.
+
+.. [3] Tomas Mikolov, Wen-tau Yih, and Geoffrey Zweig. Linguistic Regularities in Continuous Space Word Representations. In Proceedings of NAACL HLT, 2013.
