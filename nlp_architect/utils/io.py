@@ -14,12 +14,13 @@
 # limitations under the License.
 # ******************************************************************************
 import argparse
+import gzip
 import io
+import json
 import os
 import posixpath
 import re
 import zipfile
-from os import walk, path
 
 import requests
 from tqdm import tqdm
@@ -56,25 +57,64 @@ def download_unlicensed_file(url, sourcefile, destfile, totalsz=None):
     print("Download Complete")
 
 
-def unzip_file(filepath, outpath='.'):
+def uncompress_file(filepath, outpath='.'):
     """
     Unzip a file to the same location of filepath
+    uses decompressing algorithm by file extension
 
     Args:
         filepath (str): path to file
         outpath (str): path to extract to
     """
-    z = zipfile.ZipFile(filepath, 'r')
-    z.extractall(outpath)
-    z.close()
+    if filepath.endswith('.zip'):
+        z = zipfile.ZipFile(filepath, 'r')
+        z.extractall(outpath)
+        z.close()
+    elif filepath.endswith('.gz'):
+        if os.path.isdir(outpath):
+            raise ValueError('output path for gzip must be a file')
+        with gzip.open(filepath, 'rb') as fp:
+            file_content = fp.read()
+        with open(outpath, 'wb') as fp:
+            fp.write(file_content)
+    else:
+        raise ValueError('Unsupported archive provided. Method supports only .zip/.gz files.')
+
+
+def gzip_str(g_str):
+    """
+    Transform string to GZIP coding
+
+    Args:
+        g_str (str): string of data
+
+    Returns:
+        GZIP bytes data
+    """
+    compressed_str = io.BytesIO()
+    with gzip.GzipFile(fileobj=compressed_str, mode='w') as file_out:
+        file_out.write((json.dumps(g_str).encode()))
+    bytes_obj = compressed_str.getvalue()
+    return bytes_obj
+
+
+def check_directory_and_create(dir_path):
+    """
+    Check if given directory exists, create if not.
+
+    Args:
+        dir_path (str): path to directory
+    """
+    if not os.path.exists(dir_path):
+        os.makedirs(dir_path)
 
 
 def walk_directory(directory):
     """Iterates a directory's text files and their contents."""
-    for dir_path, _, filenames in walk(directory):
+    for dir_path, _, filenames in os.walk(directory):
         for filename in filenames:
-            file_path = path.join(dir_path, filename)
-            if path.isfile(file_path) and not filename.startswith('.'):
+            file_path = os.path.join(dir_path, filename)
+            if os.path.isfile(file_path) and not filename.startswith('.'):
                 with io.open(file_path, 'r', encoding='utf-8') as file:
                     print('Reading ' + filename)
                     doc_text = file.read()
@@ -126,7 +166,7 @@ def validate_existing_filepath(arg):
 
 def validate_existing_directory(arg):
     """Validates an input argument is a path string to an existing directory."""
-    arg = path.abspath(arg)
+    arg = os.path.abspath(arg)
     validate((arg, str, 0, 255))
     if not os.path.isdir(arg):
         raise ValueError("{0} does not exist".format(arg))
@@ -135,10 +175,42 @@ def validate_existing_directory(arg):
 
 def validate_parent_exists(arg):
     """Validates an input argument is a path string, and its parent directory exists."""
-    arg = path.abspath(arg)
+    arg = os.path.abspath(arg)
     dir_arg = os.path.dirname(os.path.abspath(arg))
-    if not validate_existing_directory(dir_arg) is None:
+    if validate_existing_directory(dir_arg):
         return arg
+    return None
+
+
+def valid_path_append(path, *args):
+    """
+    Helper to validate passed path directory and append any subsequent
+    filename arguments.
+
+    Arguments:
+        path (str): Initial filesystem path.  Should expand to a valid
+                    directory.
+        *args (list, optional): Any filename or path suffices to append to path
+                                for returning.
+        Returns:
+            (list, str): path prepended list of files from args, or path alone if
+                     no args specified.
+    Raises:
+        ValueError: if path is not a valid directory on this filesystem.
+    """
+    full_path = os.path.expanduser(path)
+    res = []
+    if not os.path.exists(full_path):
+        os.makedirs(full_path)
+    if not os.path.isdir(full_path):
+        raise ValueError("path: {0} is not a valid directory".format(path))
+    for suffix_path in args:
+        res.append(os.path.join(full_path, suffix_path))
+    if len(res) == 0:
+        return path
+    if len(res) == 1:
+        return res[0]
+    return res
 
 
 def sanitize_path(path):
@@ -156,10 +228,10 @@ def check(validator):
     return CustomAction
 
 
-def check_size(min=None, max=None):
+def check_size(min_size=None, max_size=None):
     class CustomAction(argparse.Action):
         def __call__(self, parser, namespace, values, option_string=None):
-            validate((values, self.type, min, max, self.dest))
+            validate((values, self.type, min_size, max_size, self.dest))
             setattr(namespace, self.dest, values)
 
     return CustomAction
@@ -177,3 +249,53 @@ def validate_proxy_path(arg):
     if arg is not None and re.match(proxy_validation_regex, arg) is None:
         raise ValueError("{0} is not a valid proxy path".format(arg))
     return arg
+
+
+def validate_boolean(arg):
+    """Validates an input argument of type boolean"""
+    if arg.lower() not in ['true', 'false']:
+        raise argparse.ArgumentTypeError('expected true | false argument')
+    return arg.lower() == "true"
+
+
+def load_json_file(file_path):
+    """load a file into a json object"""
+    try:
+        with open(file_path) as small_file:
+            return json.load(small_file)
+    except OSError as e:
+        print(e)
+        print('trying to read file in blocks')
+        with open(file_path) as big_file:
+            json_string = ''
+            while True:
+                block = big_file.read(64 * (1 << 20))  # Read 64 MB at a time;
+                json_string = json_string + block
+                if not block:  # Reached EOF
+                    break
+            return json.loads(json_string)
+
+
+def json_dumper(obj):
+    """for objects that have members that cant be serialized and implement toJson() method"""
+    try:
+        return obj.toJson()
+    except Exception:
+        return obj.__dict__
+
+
+def load_files_from_path(dir_path, extension='txt'):
+    """load all files from given directory (with given extension)"""
+    files = [os.path.join(dir_path, f) for f in os.listdir(dir_path)
+             if os.path.isfile(os.path.join(dir_path, f)) and f.endswith(extension)]
+    files_data = []
+    for f in files:
+        with open(f) as fp:
+            files_data.append(' '.join(map(str.strip, fp.readlines())))
+    return files_data
+
+
+def create_folder(path):
+    if path:
+        if not os.path.exists(path):
+            os.makedirs(path)

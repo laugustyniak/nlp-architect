@@ -42,52 +42,74 @@ timestamps {
             // Send Slack start message
             slackStartMessage()
 
-            // Clear previous workspace
-            deleteDir()
-
-            stage('Checkout') {
-                // Clone repo at triggered commit
-                checkout scm
-            }
-
-            stage('Build') {
-                // Build using Makefile
-                sh 'make'
-            }
-
-            // Wrap this stage in a try/catch to prevent Jenkins from fast failing
-            //      By default, if any command fails (i.e.: if an sh call returns a non-zero exit code)
-            //      however with this call wrapped in the below, we ignore the exception but we flag
-            //      the build as a failure.
             try {
-                stage('Test') {
-                    // Run tests using Makefile
-                    // TODO: Leverage Jenkins J/XUnit plugins to scan test results
-                    //      by exporting test results as a known J/XUnit style artifact
-                    sh 'make test'
+
+                // Clear previous workspace
+                deleteDir()
+
+                stage('Checkout') {
+                    // Clone repo at triggered commit
+                    checkout scm
+                }
+
+                stage('Build') {
+                    // Build using Makefile
+                    sh 'python3 --version'
+                    sh 'python3 -V -V'
+                    sh 'python3 -m venv .nlp_architect_env'
+                    sh """
+                      . .nlp_architect_env/bin/activate
+                      pip3 install -U pip
+                      pip3 install -U h5py
+                      export NLP_ARCHITECT_BE=CPU
+                      pip3 install -e .
+                    """
+                }
+
+                // Wrap this stage in a try/catch to prevent Jenkins from fast failing
+                //      By default, if any command fails (i.e.: if an sh call returns a non-zero exit code)
+                //      however with this call wrapped in the below, we ignore the exception but we flag
+                //      the build as a failure.
+                try {
+                    stage('Test') {
+                        // Run tests using Makefile
+                        // TODO: Leverage Jenkins J/XUnit plugins to scan test results
+                        //      by exporting test results as a known J/XUnit style artifact
+                        sh """
+                          . .nlp_architect_env/bin/activate
+                          nlp_architect test
+                        """
+                    }
+                } catch (err) {
+                    echo "BUILD FAILURE - Caught Exception: ${err}"
+                    // Inform Jenkins this run is now in a FAILURE state
+                    currentBuild.result = 'FAILURE'
+                }
+
+                // Wrap this stage in a try/catch to prevent Jenkins from fast failing
+                //      By default, if any command fails (i.e.: if an sh call returns a non-zero exit code)
+                //      however with this call wrapped in the below, we ignore the exception but we flag
+                //      the build as a failure.
+                try {
+                    stage('Style') {
+                        // Run style checks using Makefile
+                        // TODO: Leverage Jenkins Warnings plugins to scan for style errors
+                        //      by exporting style check results as a known artifact
+                        sh """
+                          . .nlp_architect_env/bin/activate
+                          nlp_architect style
+                        """
+                    }
+                } catch (err) {
+                    echo "BUILD FAILURE - Caught Exception: ${err}"
+                    // Inform Jenkins this run is now in a FAILURE state
+                    currentBuild.result = 'FAILURE'
                 }
             } catch (err) {
-                echo "BUILD FAILURE - Caught Exception: ${err}"
-                // Inform Jenkins this run is now in a FAILURE state
-                currentBuild.result = 'FAILURE'
-            }
-
-            // Wrap this stage in a try/catch to prevent Jenkins from fast failing
-            //      By default, if any command fails (i.e.: if an sh call returns a non-zero exit code)
-            //      however with this call wrapped in the below, we ignore the exception but we flag
-            //      the build as a failure.
-            try {
-                stage('Style') {
-                    // Run style checks using Makefile
-                    // TODO: Leverage Jenkins Warnings plugins to scan for style errors
-                    //      by exporting style check results as a known artifact
-                    sh 'make style'
+                    echo "BUILD FAILURE - Caught Exception: ${err}"
+                    // Inform Jenkins this run is now in a FAILURE state
+                    currentBuild.result = 'FAILURE'
                 }
-            } catch (err) {
-                echo "BUILD FAILURE - Caught Exception: ${err}"
-                // Inform Jenkins this run is now in a FAILURE state
-                currentBuild.result = 'FAILURE'
-            }
 
             // Send Slack end message
             slackEndMessage()

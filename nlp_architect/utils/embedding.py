@@ -13,14 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ******************************************************************************
-from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from __future__ import absolute_import
 
 from functools import lru_cache
 
 import numpy as np
+import tensorflow as tf
+import tensorflow_hub as hub
+
+from nlp_architect.utils.text import Vocabulary
 from tqdm import tqdm
 
 
@@ -80,3 +84,54 @@ def fill_embedding_mat(src_mat, src_lex, emb_lex, emb_size):
                 if w_emb is not None:
                     emb_mat[i][j] = w_emb
     return emb_mat
+
+
+def get_embedding_matrix(embeddings: dict, vocab: Vocabulary) -> np.ndarray:
+    """
+    Generate a matrix of word embeddings given a vocabulary
+
+    Args:
+        embeddings (dict): a dictionary of embedding vectors
+        vocab (Vocabulary): a Vocabulary
+
+    Returns:
+        a 2D numpy matrix of lexicon embeddings
+    """
+    emb_size = len(next(iter(embeddings.values())))
+    mat = np.zeros((vocab.max, emb_size))
+    for word, wid in vocab.vocab.items():
+        vec = embeddings.get(word.lower(), None)
+        if vec is not None:
+            mat[wid] = vec
+    return mat
+
+
+# pylint: disable=not-context-manager
+class ELMoEmbedderTFHUB(object):
+    def __init__(self):
+        self.g = tf.Graph()
+
+        with self.g.as_default():
+            text_input = tf.placeholder(dtype=tf.string)
+            text_input_size = tf.placeholder(dtype=tf.int32)
+            print('Loading Tensorflow hub ELMo model, '
+                  'might take a while on first load (downloading from web)')
+            self.elmo = hub.Module("https://tfhub.dev/google/elmo/2", trainable=False)
+            self.inputs = {
+                'tokens': text_input,
+                'sequence_len': text_input_size
+            }
+            self.embedding = self.elmo(inputs=self.inputs,
+                                       signature='tokens',
+                                       as_dict=True)['elmo']
+
+            sess = tf.Session(graph=self.g)
+            sess.run(tf.global_variables_initializer())
+            sess.run(tf.tables_initializer())
+            self.s = sess
+
+    def get_vector(self, tokens):
+        vec = self.s.run(self.embedding,
+                         feed_dict={self.inputs['tokens']: [tokens],
+                                    self.inputs['sequence_len']: [len(tokens)]})
+        return np.squeeze(vec, axis=0)

@@ -31,62 +31,116 @@ Before installing the library make sure you has the most recent packages listed 
    :escape: ~
 
    python-pip, pip, Tool to install Python dependencies
-   python-virtualenv (*), virtualenv (*), Allows creation of isolated environments ((*): This is required only for Python 2.7 installs. With Python3: test for presence of ``venv`` with ``python3 -m venv -h``)
    libhdf5-dev, h5py, Enables loading of hdf5 formats
    pkg-config, pkg-config, Retrieves information about installed libraries
 
 .. note::
-  The default installations of NLP Architect uses the default CPU backend of all deep learning framework installations. When installing on Ubuntu systems optional Intel optimized frameworks can be installed.
+  The default installation of NLP Architect use CPU-based binaries of all deep learning frameworks. Intel Optimized MKL-DNN binaries will be installed if a Linux is detected. GPU backed is supported online on Linux and if a GPU is present. See details below for instructions on how to install each backend.
 
-Instructions
+
+Installation
 ============
+Prerequisites
+-------------
 
-We recommend installing NLP Architect within a virtual environment to ensure a self-contained environment.
-To install NLP Architect models within an already existing virtual environment, see below installation receipes for custom model installation.
-The default installation will create a new local virtual environment for development purposes.
+Make sure ``pip`` and ``setuptools`` and ``venv`` are up to date before installing.
 
-To get started using our library, clone our repository:
+.. code:: bash
 
-.. code:: python
+    pip3 install -U pip setuptools venv
 
-  git clone https://github.com/NervanaSystems/nlp-architect.git
-  cd nlp-architect
+We recommend installing NLP Architect in a virtual environment to self-contain
+the work done using the library.
 
-Installing within a virtual environment
----------------------------------------
+To create and activate a new virtual environment (or skip this step and use the wizard below):
 
-*  Install in development mode (default):
+.. code:: bash
 
-.. code:: python
-
-  make
-
-*  Complete install:
-
-.. code:: python
-
-  make install
-
-*  Activate the newly created virtual environment:
-
-.. code:: python
-
-  . .nlp_architect_env/bin/activate
-
-* Fire up your favorite IDE/text editor/terminal and start running models
-
-Installing to current working python (or system wide install)
--------------------------------------------------------------
-
-*  Install without creating a new virtual environment:
-
-.. code:: python
-
-  make install_no_virt_env
+    python3 -m venv .nlp_architect_env
+    source .nlp_architect_env/bin/activate
 
 
-*  System-wide install (might require `sudo` permissions):
+.. include:: _quick_install.rst
 
-.. code:: python
+Install from source
+-------------------
 
-  make sysinstall
+To get started, clone our repository:
+
+.. code:: bash
+
+    git clone https://github.com/NervanaSystems/nlp-architect.git
+    cd nlp-architect
+
+Selecting a backend
+^^^^^^^^^^^^^^^^^^^
+
+NLP Architect supports CPU, GPU and Intel Optimized Tensorflow (MKL-DNN) backends.
+Users can select the desired backend using a dedicated environment variable (default: CPU). (MKL-DNN and GPU backends are supported only on Linux)
+
+.. code:: bash
+
+    export NLP_ARCHITECT_BE=CPU/MKL/GPU
+
+Installation
+^^^^^^^^^^^^
+
+NLP Architect is installed using `pip` and it is recommended to install in development mode.
+
+Default:
+
+.. code:: bash
+
+    pip3 install .
+
+Development mode:
+
+.. code:: bash
+
+    pip3 install -e .
+
+Once installed, the ``nlp_architect`` command provides additional options to work with the library, issue ``nlp_architect -h`` to see all options.
+
+======
+
+Compiling Intel® optimized Tensorflow with MKL-DNN
+==================================================
+
+NLP Architect supports MKL-DNN flavor of Tensorflow out of the box, however, if the user wishes to compile Tensorflow we provide instructions below.
+
+Tensorflow has a guide `guide <https://www.tensorflow.org/install/install_sources>`_ for compiling and installing Tensorflow with with MKL-DNN optimization. Make sure to install all required tools: bazel and python development dependencies.
+
+Alternatively, follow the instructions below to compile and install the latest version of Tensorflow with MKL-DNN:
+
+* Clone Tensorflow repository from GitHub:
+
+  .. code::
+
+      git clone https://github.com/tensorflow/tensorflow
+      cd tensorflow
+
+* Configure Tensorflow for compilation:
+
+  .. code::
+
+      ./configure
+
+* Compile Tensorflow with MKL-DNN:
+
+  .. code::
+
+      bazel build --config=mkl --config=opt //tensorflow/tools/pip_package:build_pip_package
+
+* Create pip package in ``/tmp/tensorflow_pkg``:
+
+  .. code::
+
+      bazel-bin/tensorflow/tools/pip_package/build_pip_package /tmp/tensorflow_pkg
+
+* Install Tensorflow pip package:
+
+  .. code::
+
+      pip install <tensorflow package name>.whl
+
+* Refer to `this <https://www.tensorflow.org/performance/performance_guide#tensorflow_with_intel_mkl_dnn>`_ guide for specific configuration to get optimal performance when running your model.

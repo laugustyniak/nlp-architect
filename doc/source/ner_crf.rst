@@ -49,9 +49,9 @@ In the above format each sentence is separated by an empty line. Each line consi
 Data loader
 -----------
 
-Loading data into the model can be done using the ``SequentialTaggingDataset`` data loader from ``nlp_architect.data.sequential_tagging`` package, which can be used with the preprared train and test data sets described above.
+Loading data into the model can be done using the :py:class:`SequentialTaggingDataset <nlp_architect.data.sequential_tagging.SequentialTaggingDataset>` data loader which can be used with the prepared train and test data sets described above.
 
-The data loader returns 2 numpy matrices:
+The data loader returns 2 Numpy matrices:
 1. sparse word representation of the sentence words
 2. sparse word character representation of sentence words
 
@@ -74,20 +74,16 @@ A high level overview of the model is provided in figure below:
 Feature generation
 ------------------
 
-NER words or phrases can sometimes be easily identified by the shape of the words, by pre-built lexicons, by Part-of-speech analysis or rules combining patterns of the above features. In many other cases, those features are not known or non existant and the context in which the words appear provide the indication whether a word or a phrase is an entity.
+NER words or phrases can sometimes be easily identified by the shape of the words, by pre-built lexicons, by Part-of-speech analysis or rules combining patterns of the above features. In many other cases, those features are not known or non existent and the context in which the words appear provide the indication whether a word or a phrase is an entity.
 
-Character embedding sub-network figure:
-
-.. image:: assets/char_embedding.png
-
-With the help of RNN topologies we can use LSTM layers to extract the character based features of words. In this model we used a two LSTM layers (in forward and backward directions) for extracting a feature vector on the character representation of words. The last state of the layers are concatenated and marked as the feature vector of a word. More info on character embedding can be found in the paper.
+With the help of RNN topologies we can use LSTMs to extract the character based features of words. In this model we use convolutions to extract n-grams features from the characters making up words. A similar approach with RNNs takes the last state of a BiLSTM layer as a representation of the character embeddings. More info on character embedding can be found in the paper.
 
 Prediction layer
 ----------------
 
 The main tagger model consists of a bidirectional LSTM layers. The input of the LSTM layers consists of a concatenation of the word embedding vector and the character embedding vector (provided by the character embedding network).
 
-Finally, the output of the LSTM layers are merged into a fully-connected layer (for each token) and fed into a `Conditional Random Field classifier`_. CRF prediction layers have been empirically proved to provide more accuract models when compared to single token prediction (when using a `softmax` layer).
+Finally, the output of the LSTM layers are merged into a fully-connected layer (for each token) and fed into a `Conditional Random Field classifier`_. Using CRF has been empirically shown to provide more accurate models when compared to single token prediction layers (such as a `softmax` layer).
 
 Running Modalities
 ==================
@@ -100,40 +96,40 @@ Train a model with default parameters given input data files:
 
 .. code:: python
 
-	python train.py --train_file train.txt --test_file test.txt
+	python examples/ner/train.py --train_file train.txt --test_file test.txt
 
 Full training parameters
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-All customizable parameters can be obtained by running: ``python train.py -h``
+All customizable parameters can be obtained by running: ``python examples/ner/train.py -h``
 
-.. code:: bash
-
-  -b B                  Batch size
-  -e E                  Number of epochs
-  --train_file TRAIN_FILE
-                        Train file (sequential tagging dataset format)
-  --test_file TEST_FILE
-                        Test file (sequential tagging dataset format)
-  --tag_num TAG_NUM     Entity labels tab number in train/test files
-  --sentence_length SENTENCE_LENGTH
-                        Max sentence length
-  --word_length WORD_LENGTH
-                        Max word length in characters
-  --word_embedding_dims WORD_EMBEDDING_DIMS
-                        Word features embedding dimension size
-  --character_embedding_dims CHARACTER_EMBEDDING_DIMS
-                        Character features embedding dimension size
-  --char_features_lstm_dims CHAR_FEATURES_LSTM_DIMS
-                        Character feature extractor LSTM dimension size
-  --entity_tagger_lstm_dims ENTITY_TAGGER_LSTM_DIMS
-                        Entity tagger LSTM dimension size
-  --dropout DROPOUT     Dropout rate
-  --embedding_model EMBEDDING_MODEL
-                        Path to external word embedding model file
-  --model_path MODEL_PATH
-                        Path for saving model weights
-  --model_info_path MODEL_INFO_PATH
-                        Path for saving model topology
+-h, --help            show this help message and exit
+-b B                  Batch size
+-e E                  Number of epochs
+--train_file TRAIN_FILE
+                    Train file (sequential tagging dataset format)
+--test_file TEST_FILE
+                    Test file (sequential tagging dataset format)
+--tag_num TAG_NUM     Entity labels tab number in train/test files
+--sentence_length SENTENCE_LENGTH
+                    Max sentence length
+--word_length WORD_LENGTH
+                    Max word length in characters
+--word_embedding_dims WORD_EMBEDDING_DIMS
+                    Word features embedding dimension size
+--character_embedding_dims CHARACTER_EMBEDDING_DIMS
+                    Character features embedding dimension size
+--char_features_lstm_dims CHAR_FEATURES_LSTM_DIMS
+                    Character feature extractor LSTM dimension size
+--entity_tagger_lstm_dims ENTITY_TAGGER_LSTM_DIMS
+                    Entity tagger LSTM dimension size
+--dropout DROPOUT     Dropout rate
+--embedding_model EMBEDDING_MODEL
+                    Path to external word embedding model file
+--model_path MODEL_PATH
+                    Path for saving model weights
+--model_info_path MODEL_INFO_PATH
+                    Path for saving model topology
+--use_cudnn           use CUDNN based LSTM cells
 
 The model will automatically save the model weights and topology information after training is complete (user can provide file names as above).
 
@@ -142,32 +138,23 @@ Interactive mode
 
 The provided ``interactive.py`` file enables using a pre-trained model in interactive mode, providing input directly from stdin.
 
-Run ``python interactive.py -h`` for a full list of options:
+Run ``python examples/ner/interactive.py -h`` for a full list of options:
 
-.. code:: bash
-
-  --model_path MODEL_PATH
-                        Path of model weights
-  --model_info_path MODEL_INFO_PATH
-                        Path of model topology
+--model_path MODEL_PATH
+                      Path of model weights
+--model_info_path MODEL_INFO_PATH
+                      Path of model topology
 
 Quick example:
 
 .. code:: python
 
-	python interactive.py --model_path model.h5 --model_info_path model_info.dat
-
-
-Evaluation
-==========
-TBD
-
+	python examples/ner/interactive.py --model_path model.h5 --model_info_path model_info.dat
 
 References
 ==========
 
-[1] - `Neural Architectures for Named Entity Recognition`_ - Guillaume Lample, Miguel Ballesteros, Sandeep Subramanian, Kazuya Kawakami, Chris Dyer. 2016
-
+1. `Neural Architectures for Named Entity Recognition`_ - Guillaume Lample, Miguel Ballesteros, Sandeep Subramanian, Kazuya Kawakami, Chris Dyer. 2016
 
 .. _BIO: https://en.wikipedia.org/wiki/Inside%E2%80%93outside%E2%80%93beginning_(tagging)
 .. _`Lample et al.`: https://arxiv.org/abs/1603.01360

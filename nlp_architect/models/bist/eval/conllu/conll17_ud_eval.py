@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ******************************************************************************
-# pylint: disable=missing-docstring
 
 import os
 import sys
@@ -85,7 +84,7 @@ import sys
 # For every multi-word span, we align the gold and system words completely
 # inside this span using LCS on their FORMs. The words not intersecting
 # (even partially) any multi-word span are then aligned as tokens.
-# pylint: disable=invalid-name
+# pylint: disable=too-many-statements
 
 # CoNLL-U column names
 ID, FORM, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC = list(range(10))
@@ -241,8 +240,8 @@ def load_conllu(file):
             if word_id != len(ud.words) - sentence_start + 1:
                 raise UDError("Incorrect word ID '{}' for word '{}', expected"
                               " '{}'".format(columns[ID], columns[FORM],
-                                             len(ud.words) -
-                                             sentence_start + 1))
+                                             len(ud.words)
+                                             - sentence_start + 1))
 
             try:
                 head_id = int(columns[HEAD])
@@ -465,8 +464,8 @@ def evaluate(gold_ud, system_ud, deprel_weights=None):
 
         raise UDError(
             "The concatenation of tokens in gold file and in system file "
-            "differ!\n" +
-            "First 20 differing characters in gold file: '{}' and system file:"
+            "differ!\n"
+            + "First 20 differing characters in gold file: '{}' and system file:"
             " '{}'".format(
                 "".join(gold_ud.characters[index:index + 20]),
                 "".join(system_ud.characters[index:index + 20])
