@@ -1,3 +1,6 @@
+from pathlib import Path
+from typing import Dict
+
 import numpy as np
 from keras import Input, Model
 from keras.layers import (
@@ -11,7 +14,7 @@ from keras.layers import (
 )
 from keras_contrib.layers import CRF
 from keras_contrib.utils import save_load_utils
-from typing import Dict
+from pyfasttext import FastText
 
 from nlp_architect.utils.embedding import load_word_embeddings
 
@@ -70,18 +73,24 @@ class AspectExtraction(object):
                 # load and prepare external word embedding
                 external_emb, ext_emb_size = load_word_embeddings(external_embedding_model)
 
-                embedding_matrix = np.zeros((word_vocab_size, ext_emb_size))
-                for word, i in word_vocab.items():
-                    embedding_vector = external_emb.get(word.lower())
-                    if embedding_vector is not None:
-                        # words not found in embedding index will be all-zeros.
-                        embedding_matrix[i] = embedding_vector
+                # if Path(external_embedding_model).stem in ['cc.en.300.bin']:
+                model = FastText(external_embedding_model)
+                embedding_matrix = np.zeros((word_vocab_size, word_embedding_dims))
+                for word, i in word_vocab.vocab.items():
+                    embedding_matrix[i] = model.get_numpy_vector(word)
+                # else:
+                #     embedding_matrix = np.zeros((word_vocab_size, ext_emb_size))
+                #     for word, i in word_vocab.vocab.items():
+                #         embedding_vector = external_emb.get(word.lower())
+                #         if embedding_vector is not None:
+                            # words not found in embedding index will be all-zeros.
+                            # embedding_matrix[i] = embedding_vector
 
                 # load pre-trained word embeddings into an Embedding layer
                 # note that we set trainable = False so as to keep the embeddings fixed
                 embedding_layer = Embedding(
                     word_vocab_size,
-                    ext_emb_size,
+                    word_embedding_dims,
                     weights=[embedding_matrix],
                     input_length=sentence_length,
                     trainable=False

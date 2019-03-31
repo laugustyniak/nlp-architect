@@ -12,7 +12,8 @@ from pathlib import Path
 from tqdm import tqdm
 from typing import Iterable
 
-from nlp_architect.contrib.keras.callbacks import ConllCallback
+# from nlp_architect.contrib.keras.callbacks import ConllCallback
+from nlp_architect.contrib.tensorflow.python.keras.callbacks import ConllCallback
 from nlp_architect.data.sequential_tagging import SequentialTaggingDataset
 from nlp_architect.models.aspect_extraction import AspectExtraction
 from nlp_architect.utils.metrics import get_conll_scores
@@ -21,28 +22,31 @@ DatasetFiles = namedtuple('Dataset', ['name', 'train_file', 'test_file'])
 
 EMBEDDINGS = [
 
+    # fasttext bin models
+    ('cc.en.300.bin', 300),
+
     # Google's word2vec news
-    ('GoogleNews-vectors-negative300.txt', 300),
+    # ('GoogleNews-vectors-negative300.txt', 300),
 
     # # https://nlp.stanford.edu/projects/glove/
-    ('glove.840B.300d.txt', 300),
-    ('glove.42B.300d.txt', 300),
-    ('glove.6B.300d.txt', 300),
-    ('glove.6B.200d.txt', 200),
-    ('glove.6B.100d.txt', 100),
-    ('glove.6B.50d.txt', 50),
+    # ('glove.840B.300d.txt', 300),
+    # ('glove.42B.300d.txt', 300),
+    # ('glove.6B.300d.txt', 300),
+    # ('glove.6B.200d.txt', 200),
+    # ('glove.6B.100d.txt', 100),
+    # ('glove.6B.50d.txt', 50),
     # ('glove.twitter.27B.25d.txt', 25),
     # ('glove.twitter.27B.50d.txt', 50),
     # ('glove.twitter.27B.100d.txt', 100),
     # ('glove.twitter.27B.200d.txt', 200),
     # #
     # # # https://github.com/commonsense/conceptnet-numberbatch
-    ('numberbatch-en.txt', 300),
+    # ('numberbatch-en.txt', 300),
     # # #
     # # # # fasttext
-    ('crawl-300d-2M.vec', 300),
+    # ('crawl-300d-2M.vec', 300),
     # # # ('wiki-news-300d-1M-subword.vec', 300),
-    ('wiki-news-300d-1M.vec', 300),
+    # ('wiki-news-300d-1M.vec', 300),
     # # #
     # # # # https://levyomer.wordpress.com/2014/04/25/dependency-based-word-embeddings/
     # # # ('bow2.words', 300),
@@ -59,7 +63,7 @@ EMBEDDINGS = [
     # # # ('sota-wiki-600.txt', 600),
     # #
     # # # Cambria CNN aspects based on Amazon reviews
-    ('sentic2vec.txt', 300),
+    # ('sentic2vec.txt', 300),
     #
     # ('lexvec.commoncrawl.ngramsubwords.300d.W.pos.vectors', 300),
     # ('lexvec.enwiki+newscrawl.300d.W.pos.vectors', 300),
@@ -192,16 +196,14 @@ def run_aspect_sequence_tagging(
     dataset = SequentialTaggingDataset(
         train_file=train_file,
         test_file=test_file,
-        augment_data=augment_data,
-        similarity_threshold=similarity_threshold,
         max_sentence_length=sentence_length,
         max_word_length=word_length,
         tag_field_no=tag_num
     )
 
     # get the train and test data sets
-    x_train, x_char_train, y_train = dataset.train
-    x_test, x_char_test, y_test = dataset.test
+    x_train, x_char_train, y_train = dataset.data['train']
+    x_test, x_char_test, y_test = dataset.data['test']
 
     if word_embedding_flag and char_embedding_flag:
         x_train = [x_train, x_char_train]
@@ -248,7 +250,7 @@ def run_aspect_sequence_tagging(
     print('Tensorboard: ' + tensorboard_path)
 
     callbacks = [
-        ConllCallback(x_test, y_test, dataset.y_labels, batch_size=batch_size),
+        ConllCallback(x_test, y_test, dataset.y_labels.vocab, batch_size=batch_size),
         TensorBoard(log_dir=tensorboard_path),
         EarlyStopping(monitor='val_loss', patience=2),
         # ModelCheckpoint(
@@ -269,7 +271,7 @@ def run_aspect_sequence_tagging(
 
     # running predictions
     predictions = aspect_model.predict(x=x_test, batch_size=1)
-    eval = get_conll_scores(predictions, y_test, {v: k for k, v in dataset.y_labels.items()})
+    eval = get_conll_scores(predictions, y_test, {v: k for k, v in dataset.y_labels.vocab.items()})
     pp = pprint.PrettyPrinter(indent=4)
     pp.pprint(eval)
 
@@ -279,7 +281,7 @@ def run_aspect_sequence_tagging(
             'sentence_len': sentence_length,
             'word_len': word_length,
             'num_of_labels': num_y_labels,
-            'labels_id_to_word': {v: k for k, v in dataset.y_labels.items()},
+            'labels_id_to_word': {v: k for k, v in dataset.y_labels.vocab.items()},
             'epoch': epoch,
             # 'word_vocab': dataset.word_vocab,
             'vocab_size': vocabulary_size,
