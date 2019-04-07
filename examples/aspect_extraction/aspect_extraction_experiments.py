@@ -23,14 +23,14 @@ DatasetFiles = namedtuple('Dataset', ['name', 'train_file', 'test_file'])
 EMBEDDINGS = [
 
     # fasttext bin models
-    ('cc.en.300.bin', 300),
+    # ('cc.en.300.bin', 300),
 
     # Google's word2vec news
     # ('GoogleNews-vectors-negative300.txt', 300),
 
     # # https://nlp.stanford.edu/projects/glove/
     # ('glove.840B.300d.txt', 300),
-    # ('glove.42B.300d.txt', 300),
+    ('glove.42B.300d.txt', 300),
     # ('glove.6B.300d.txt', 300),
     # ('glove.6B.200d.txt', 200),
     # ('glove.6B.100d.txt', 100),
@@ -74,7 +74,7 @@ DATASETS_PATS = [
     # 'semeval/2014',
     'semeval/2014/poria',
 ]
-TF = [True, False]
+TF = [True]
 
 
 @click.command()
@@ -88,7 +88,7 @@ def run_evaluation_multi_datasets_and_multi_embeddings(
 
     for embedding, word_embedding_dims in tqdm(EMBEDDINGS, desc='Embeddings progress'):
         for word_embedding_flag in [True]:
-            for char_embedding_flag in TF:
+            for char_embedding_flag in [True]:
                 for bilstm_layer in TF:
                     for crf_layer in TF:
 
@@ -297,8 +297,6 @@ def run_aspect_sequence_tagging(
             'test_file': test_file,
             # 'test_raw_sentences': dataset.test_raw_sentences,
             'eval': eval,
-            # 'data_augmentation': dataset.data_augmentation,
-            # 'augment_data': augment_data,
             'similarity_threshold': similarity_threshold,
             'bilstm_layer': bilstm_layer,
             'crf_layer': crf_layer,

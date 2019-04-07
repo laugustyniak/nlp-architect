@@ -50,7 +50,7 @@ class AspectExtraction(object):
             sentence_length (int): max sentence length
             word_length (int): max word length in characters
             target_label_dims (int): number of entity labels (for classification)
-            word_vocab (dict): word to int dictionary
+            word_vocab : word to int dictionary
             word_vocab_size (int): word vocabulary size
             char_vocab_size (int): character vocabulary size
             word_embedding_dims (int): word embedding dimensions
@@ -74,17 +74,17 @@ class AspectExtraction(object):
                 external_emb, ext_emb_size = load_word_embeddings(external_embedding_model)
 
                 # if Path(external_embedding_model).stem in ['cc.en.300.bin']:
-                model = FastText(external_embedding_model)
-                embedding_matrix = np.zeros((word_vocab_size, word_embedding_dims))
-                for word, i in word_vocab.vocab.items():
-                    embedding_matrix[i] = model.get_numpy_vector(word)
+                # model = FastText(external_embedding_model)
+                # embedding_matrix = np.zeros((word_vocab_size, word_embedding_dims))
+                # for word, i in word_vocab.vocab.items():
+                #     embedding_matrix[i] = model.get_numpy_vector(word)
                 # else:
-                #     embedding_matrix = np.zeros((word_vocab_size, ext_emb_size))
-                #     for word, i in word_vocab.vocab.items():
-                #         embedding_vector = external_emb.get(word.lower())
-                #         if embedding_vector is not None:
-                            # words not found in embedding index will be all-zeros.
-                            # embedding_matrix[i] = embedding_vector
+                embedding_matrix = np.zeros((word_vocab_size, ext_emb_size))
+                for word, i in word_vocab.vocab.items():
+                    embedding_vector = external_emb.get(word.lower())
+                    if embedding_vector is not None:
+                        # words not found in embedding index will be all-zeros.
+                        embedding_matrix[i] = embedding_vector
 
                 # load pre-trained word embeddings into an Embedding layer
                 # note that we set trainable = False so as to keep the embeddings fixed
