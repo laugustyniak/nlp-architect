@@ -16,7 +16,7 @@ from nlp_architect.models.aspect_extraction import AspectExtraction
 @click.option('--word-embedding-path', required=True, type=Path, help='Path to the embeddings')
 @click.option('--word-embedding-dim', required=False, type=int, default=300, help='Len of word embedding vectors')
 @click.option('--char-embedding-dim', required=False, type=int, default=25, help='Len of character embedding vectors')
-@click.option('--epochs', required=False, default=2, help='Number of epochs to calculate')
+@click.option('--epochs', required=False, default=25, help='Number of epochs to calculate')
 @click.option('--tag-number', required=False, default=3, help='Number of column with tag to classify')
 @click.option('--sentence-length', required=False, type=int, default=30)
 @click.option('--word-length', required=False, type=int, default=20)
