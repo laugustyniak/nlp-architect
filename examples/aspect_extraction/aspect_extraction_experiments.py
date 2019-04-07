@@ -6,7 +6,7 @@ from collections import namedtuple
 from os.path import basename, join
 
 import click
-from keras.callbacks import TensorBoard, EarlyStopping, ModelCheckpoint
+from keras.callbacks import TensorBoard, EarlyStopping
 from keras.utils import to_categorical
 from pathlib import Path
 from tqdm import tqdm
